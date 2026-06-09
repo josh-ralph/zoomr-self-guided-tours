@@ -593,7 +593,18 @@ const statusEl=document.getElementById('status');
 const fmt=m=> m<1000 ? Math.round(m/5)*5+' m' : (m/1000).toFixed(1)+' km';
 let statusTimer=null;
 function setStatus(t,warn,autohide){clearTimeout(statusTimer);statusEl.style.display='block';statusEl.textContent=t;statusEl.classList.toggle('warn',!!warn);if(autohide)statusTimer=setTimeout(()=>{statusEl.style.display='none';},5000);}
-function speak(t){ if(!voiceOn||!('speechSynthesis'in window))return; try{const u=new SpeechSynthesisUtterance(t);u.rate=1;u.pitch=1;speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){} }
+let speechQ=[], speaking=false;
+function speak(t,type){ if(!voiceOn||!('speechSynthesis'in window)||!t)return;
+  const item={t,type:type||'normal'};
+  if(type==='turn'){ let i=0; while(i<speechQ.length && speechQ[i].type==='turn') i++; speechQ.splice(i,0,item); }  // turns jump ahead of queued stop blurbs
+  else speechQ.push(item);
+  pumpSpeech();
+}
+function pumpSpeech(){ if(speaking||!speechQ.length||!voiceOn) return; const it=speechQ.shift(); speaking=true;
+  try{ const u=new SpeechSynthesisUtterance(it.t); u.rate=1; u.pitch=1; u.onend=()=>{ speaking=false; pumpSpeech(); }; u.onerror=()=>{ speaking=false; pumpSpeech(); }; speechSynthesis.speak(u); }
+  catch(e){ speaking=false; }
+}
+function stopSpeech(){ speechQ=[]; speaking=false; if('speechSynthesis'in window) speechSynthesis.cancel(); }
 function resetProgress(){reached=new Set();nextStop=0;cur=0;skipping=false;renderPanel();}
 const COMPASS8=['north','north-east','east','south-east','south','south-west','west','north-west'];
 function cardinal(b){ return COMPASS8[Math.round((((b%360)+360)%360)/45)%8]; }
@@ -632,7 +643,7 @@ async function speakArrival(p){
   if(voiceOn){
     const d=directionToNext(s);
     const cue = d ? ' '+cueText(d,'When you’re ready,') : ' You’ve reached the last stop.';
-    speak(text + ' …' + cue);
+    speak(text + ' …' + cue, 'stop');
   }
 }
 // rider leaves a stop (or taps Next): switch focus to the next target — but DON'T narrate until they arrive there
@@ -672,12 +683,12 @@ function computeManeuversFor(R){
 function computeManeuvers(){ return computeManeuversFor(DATA.route); }
 function applyTurnOverrides(tour, mans){
   const tt=tour.turns; if(!tt) return mans;
-  if(tt.edits){ for(let q=mans.length-1;q>=0;q--){ const e=tt.edits[mans[q].i]; if(e){ if(e.off){ mans.splice(q,1); continue; } if(e.street!=null) mans[q].street=e.street; if(e.text!=null) mans[q].text=e.text; if(e.ni!=null) mans[q].i=e.ni; } } }
-  if(Array.isArray(tt.added)) tt.added.forEach(a=>mans.push({i:a.i|0,lat:a.lat,lon:a.lon,angle:a.angle||0,street:a.street||null,text:a.text||null,fetching:(a.street!=null),passed:false,said:false,manual:true}));
+  if(tt.edits){ for(let q=mans.length-1;q>=0;q--){ const e=tt.edits[mans[q].i]; if(e){ if(e.off){ mans.splice(q,1); continue; } if(e.street!=null) mans[q].street=e.street; if(e.text!=null) mans[q].text=e.text; if(e.ni!=null) mans[q].i=e.ni; if(e.r!=null) mans[q].rBase=e.r; } } }
+  if(Array.isArray(tt.added)) tt.added.forEach(a=>mans.push({i:a.i|0,lat:a.lat,lon:a.lon,angle:a.angle||0,street:a.street||null,text:a.text||null,rBase:(a.r!=null?a.r:null),fetching:(a.street!=null),passed:false,said:false,manual:true}));
   mans.sort((x,y)=>x.i-y.i);
   return mans;
 }
-function buildManeuvers(tour){ return applyTurnOverrides(tour, computeManeuversFor(tour.route)); }
+function buildManeuvers(tour){ const m=applyTurnOverrides(tour, computeManeuversFor(tour.route)); const ts=(tour.zones&&tour.zones.turnScale)||1; m.forEach(x=>{ x.r=((x.rBase!=null)?x.rBase:85)*ts; }); return m; }
 function resetManeuvers(){ maneuvers.forEach(m=>{m.passed=false;m.said=false;}); }
 function maneuverText(m){
   if(m.text) return m.text;                                  // admin override instruction
@@ -771,9 +782,9 @@ function updatePosition(lat,lon,acc){
   }
   // turn-by-turn: show the next maneuver when it's close; otherwise the next stop
   const turn=upcomingTurn(lat,lon);
-  if(turn && turn.dist<170){
+  if(turn && turn.dist < (turn.m.r||85)*2){
     maybeFetchStreet(turn.m);
-    if(voiceOn && !turn.m.said && turn.dist<85){ speak(maneuverText(turn.m)); turn.m.said=true; }
+    if(voiceOn && !turn.m.said && turn.dist < (turn.m.r||85)){ speak(maneuverText(turn.m),'turn'); turn.m.said=true; }
     setStatus((turn.m.angle<0?'↰ ':'↱ ')+maneuverText(turn.m)+' · '+fmt(turn.dist));
     return;
   }
@@ -931,7 +942,7 @@ function locateMe(){
 document.getElementById('previewBtn').onclick=enterPreview;
 document.getElementById('previewEndBtn').onclick=exitPreview;
 document.getElementById('gpsBtn').onclick=locateMe;
-document.getElementById('voiceBtn').onclick=function(){ voiceOn=!voiceOn; this.classList.toggle('on',voiceOn); if(voiceOn){speak('Voice guide on.');} else if('speechSynthesis'in window){speechSynthesis.cancel();} };
+document.getElementById('voiceBtn').onclick=function(){ voiceOn=!voiceOn; this.classList.toggle('on',voiceOn); if(voiceOn){speak('Voice guide on.');} else stopSpeech(); };
 
 /* ---------- Tour panel (independent of map) ---------- */
 let cur=0;const $=id=>document.getElementById(id);
@@ -1142,7 +1153,7 @@ function buildCards(){
 }
 function clearLive(){
   if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null;document.getElementById('gpsBtn').classList.remove('on');}
-  if('speechSynthesis'in window)speechSynthesis.cancel();
+  stopSpeech();
   me=null; if(meDot){meDot.style.display='none';} follow=false;
   rotateOn=false; mapHeading=0; riderHeading=null; lastPos=null; gpsHeading=null; compassHeading=null; lastSpeed=0;
   movingMode=false; hvx=null; hvy=null;
@@ -1160,7 +1171,7 @@ function loadTour(i){
   body.innerHTML=''; delete body.dataset.init; chatHistory=[]; narrationCache={};   // reset chat + narration for new tour
   document.getElementById('tourName').textContent=DATA.tour.name;
   document.getElementById('pill').textContent=`${DATA.km} km · ${DATA.dur}`;
-  DATA.stops.forEach(s=>{ s._r=Math.max(55, distToRoute(s.lat,s.lon)+30); }); // per-stop arrival radius
+  const _ss=(DATA.zones&&DATA.zones.stopScale)||1; DATA.stops.forEach(s=>{ const base=(s.r!=null?s.r:Math.max(55, distToRoute(s.lat,s.lon)+30)); s._r=base*_ss; }); // per-stop arrival radius (individual × global scale)
   order=DATA.stops.map((_,i)=>i);            // default: all stops in original order
   hubIdx=DATA.stops.findIndex(s=>/zoomr zone/i.test(s.name)); if(hubIdx<0) hubIdx=DATA.stops.findIndex(s=>/qv cafe/i.test(s.name)); if(hubIdx<0) hubIdx=0;
   maneuvers = DATA._man || (DATA._man=buildManeuvers(DATA));   // turn-by-turn cues along the path
