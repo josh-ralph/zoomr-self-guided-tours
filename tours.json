@@ -4772,7 +4772,107 @@
         "a": "Zoomrs start and end at a Zoomr Zone hub (the pilot hub is at QV Cafe & Bakery). Lock to the rack when you're done — ending a ride outside a Zone adds fees."
       }
     ],
-    "blurb": "The long, leafy one. Follow the Galloping Goose rail-trail and the tidal Gorge waterway past murals, herons and a historic wooden trestle."
+    "blurb": "The long, leafy one. Follow the Galloping Goose rail-trail and the tidal Gorge waterway past murals, herons and a historic wooden trestle.",
+    "turns": {
+      "edits": {
+        "67": {
+          "text": "Turn left onto the E&N Rail Trail"
+        },
+        "79": {
+          "text": "Cross the street, continue down the trail"
+        },
+        "98": {
+          "off": true
+        },
+        "118": {
+          "off": true
+        },
+        "146": {
+          "off": true
+        },
+        "232": {
+          "off": true
+        },
+        "251": {
+          "text": "Turn left, then sharp right"
+        },
+        "282": {
+          "off": true
+        },
+        "401": {
+          "off": true
+        },
+        "419": {
+          "off": true
+        },
+        "428": {
+          "off": true
+        },
+        "432": {
+          "off": true
+        },
+        "435": {
+          "off": true
+        },
+        "446": {
+          "off": true
+        },
+        "508": {
+          "off": true
+        }
+      },
+      "added": [
+        {
+          "i": 1,
+          "lat": 48.42938,
+          "lon": -123.36708,
+          "angle": -32.0713047208169,
+          "text": "Turn left onto government"
+        },
+        {
+          "i": 7,
+          "lat": 48.428539,
+          "lon": -123.369507,
+          "angle": 12.1015074406032,
+          "text": "Continue straight across Johnson St. Bridge"
+        },
+        {
+          "i": 140,
+          "lat": 48.437297,
+          "lon": -123.418626,
+          "angle": -8.624710077197506,
+          "text": "Head kitty corner across the street"
+        },
+        {
+          "i": 277,
+          "lat": 48.451302,
+          "lon": -123.425229,
+          "angle": 1.25786976739289,
+          "text": "Turn left towards Craigflower Bridge"
+        },
+        {
+          "i": 398,
+          "lat": 48.43943,
+          "lon": -123.3893,
+          "angle": -27.543783060020246,
+          "text": "Turn left ahead towards the pier"
+        },
+        {
+          "i": 502,
+          "lat": 48.428946,
+          "lon": -123.374788,
+          "angle": -8.65657306508615,
+          "text": "Bear left to cross Johnson St. Bridge"
+        },
+        {
+          "i": 557,
+          "lat": 48.42938,
+          "lon": -123.36708,
+          "angle": -32.0713047208169,
+          "text": "Turn right to finish at QV Cafe"
+        }
+      ]
+    }
   },
   {
     "id": "cobble",
