@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
+<title>Zoomr · Coastal Loop Tour</title>
+<style>
+  :root{--orange:#0E9AA7;--orange-2:#16c0cf;--brand:#A7DDE1;--ink:#0c0c0c;--muted:#6b7280;--bg:#f5f6f8;--card:#fff;--line:#e7e9ee;--shadow:0 8px 30px rgba(20,24,40,.16)}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;max-width:480px;margin:0 auto;background:var(--bg);box-shadow:0 0 60px rgba(0,0,0,.12)}
+  .topbar{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;background:#fff;border-bottom:1px solid var(--line);z-index:30}
+  .logo{height:26px;width:auto;display:block}
+  .gpsBanner{display:none;align-items:center;gap:10px;padding:9px 14px;background:#A7DDE1;color:#08343a;font-size:13px;font-weight:600;z-index:29}
+  .gpsBanner.show{display:flex}
+  .gpsBanner.pick{border-radius:14px;margin-bottom:16px;z-index:81}
+  .gb-txt{flex:1;line-height:1.3}
+  .gb-open{background:#0c0c0c;color:#A7DDE1;font-weight:800;text-decoration:none;padding:6px 12px;border-radius:999px;white-space:nowrap;font-size:12.5px;cursor:pointer;border:none}
+  .gb-close{border:none;background:rgba(8,52,58,.12);color:#08343a;width:24px;height:24px;border-radius:50%;font-size:15px;line-height:1;cursor:pointer;flex:0 0 auto}
+  .brandtext{font-weight:800;letter-spacing:-.5px;font-size:19px;color:#8FCDDB}
+  .tourName{color:#5a6473;font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .backbtn{border:none;background:#eef0f4;width:30px;height:30px;border-radius:50%;font-size:20px;line-height:1;font-weight:800;color:#333;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 0 2px 0;flex:0 0 auto}
+  /* PICKER */
+  #picker{position:fixed;inset:0;z-index:80;background:linear-gradient(160deg,#ffffff 0%,#eef9fa 100%);overflow-y:auto;display:flex;justify-content:center}
+  #picker.hidden{display:none}
+  .picker-inner{width:100%;max-width:480px;padding:18px 16px 28px;display:flex;flex-direction:column}
+  .picker-head{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px 20px;margin-bottom:18px;text-align:center;box-shadow:0 4px 18px rgba(20,24,40,.06)}
+  .picker-logo{height:44px;width:auto}
+  .picker-brandtext{font-size:34px;font-weight:800;color:#8FCDDB;letter-spacing:-.8px}
+  .picker-sub{color:var(--muted);font-size:13px;margin-top:9px;font-weight:500}
+  #tourCards{display:flex;flex-direction:column;gap:14px}
+  .tcard{position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff;box-shadow:0 4px 18px rgba(20,24,40,.07);cursor:pointer;transition:transform .12s,box-shadow .12s}
+  .tcard:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(20,24,40,.13)}
+  .tcard-band{position:relative;height:112px;overflow:hidden}
+  .tcard-band svg{position:absolute;inset:0;width:100%;height:100%}
+  .tcard-band img{width:100%;height:100%;object-fit:cover;display:block}
+  .tcard-emoji{position:absolute;left:14px;bottom:8px;font-size:30px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.45))}
+  .tcard-body{padding:13px 16px 16px}
+  .tcard-name{font-size:18px;font-weight:800;letter-spacing:-.3px}
+  .tcard-blurb{font-size:13px;color:#4a5160;line-height:1.45;margin-top:5px}
+  .tcard-meta{display:flex;gap:14px;margin-top:9px;color:var(--muted);font-size:12.5px;font-weight:600}
+  .tcard-go{position:absolute;right:14px;top:14px;background:var(--ink);color:#fff;font-size:12px;font-weight:700;padding:6px 11px;border-radius:999px}
+  .picker-foot{text-align:center;color:var(--muted);font-size:12px;margin-top:22px}
+  .pill{font-size:12px;font-weight:700;background:rgba(14,154,167,.12);color:var(--orange);padding:5px 10px;border-radius:999px}
+  /* MAP */
+  #mapwrap{position:relative;flex:1;overflow:hidden;background:#aadaff;touch-action:none}
+  #scene{position:absolute;inset:0;transform-origin:center center;will-change:transform;transition:transform .25s ease}
+  #tiles{position:absolute;inset:0}
+  #tiles img{position:absolute;width:256px;height:256px;user-select:none;-webkit-user-drag:none;pointer-events:none;opacity:0;transition:opacity .35s ease}
+  #overlay{position:absolute;inset:0;pointer-events:none}
+  #markers{position:absolute;inset:0;pointer-events:none}
+  .stop-marker{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;
+    width:30px;height:30px;border-radius:50%;background:var(--orange);color:#fff;font-weight:800;font-size:14px;
+    border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.35);pointer-events:auto;cursor:pointer;transition:transform .25s,background .15s}
+  .stop-marker.active{background:#10b981;transform:translate(-50%,-50%) scale(1.22);z-index:5}
+  .stop-marker.done{background:#9aa3af}
+  .mapbtns{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:6px;z-index:20}
+  .mapbtns button{width:36px;height:36px;border:none;border-radius:9px;background:#fff;box-shadow:var(--shadow);font-size:20px;font-weight:700;color:#333;cursor:pointer}
+  .recenter{position:absolute;left:12px;top:12px;z-index:20;border:none;border-radius:999px;background:#fff;box-shadow:var(--shadow);
+    padding:8px 12px;font-size:12.5px;font-weight:700;color:#333;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .attr{position:absolute;left:6px;bottom:3px;font-size:9px;color:#5b6472;background:rgba(255,255,255,.7);padding:1px 5px;border-radius:4px;z-index:15}
+  .ai-fab{position:absolute;right:12px;bottom:14px;z-index:26;background:var(--ink);color:#fff;border:none;border-radius:999px;padding:11px 15px;font-weight:700;font-size:13.5px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;gap:7px}
+  .ai-fab-picker{position:fixed;right:16px;bottom:18px;z-index:85;background:var(--ink);color:#fff;border:none;border-radius:999px;padding:13px 18px;font-weight:700;font-size:14px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;gap:7px}
+  /* live position */
+  .me-dot{position:absolute;pointer-events:none;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;background:#1e90ff;border:3px solid #fff;box-shadow:0 0 0 2px rgba(30,144,255,.5),0 2px 6px rgba(0,0,0,.4);z-index:8;transition:transform .25s ease}
+  .me-dot::after{content:"";position:absolute;inset:-9px;border-radius:50%;background:rgba(30,144,255,.25);animation:pulse 1.6s ease-out infinite}
+  .me-dot.hasdir::before{content:"";position:absolute;left:50%;top:-13px;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:11px solid #1e90ff;filter:drop-shadow(0 -1px 1px rgba(0,0,0,.25))}
+  @keyframes pulse{0%{transform:scale(.4);opacity:.8}100%{transform:scale(1.6);opacity:0}}
+  /* live controls */
+  .livebar{position:absolute;left:12px;bottom:12px;z-index:20;pointer-events:none}
+  .livebtns{display:flex;gap:6px;pointer-events:auto}
+  .lbtn{border:none;border-radius:999px;background:#fff;box-shadow:var(--shadow);padding:9px 13px;font-size:13px;font-weight:700;color:#333;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .lbtn.on{background:var(--orange);color:#fff}
+  .lbtn.icon{width:42px;height:42px;padding:0;justify-content:center;border-radius:12px}
+  .lbtn.icon svg{width:21px;height:21px;display:block;color:#2b3340}
+  .lbtn.on svg{color:#fff}
+  .next-cue{margin-top:10px;font-size:13.5px;font-weight:700;line-height:1.45;color:#0E5C66;background:#e8f8fb;border:1px solid #bfe7ee;border-radius:10px;padding:10px 12px}
+  .revii-tip{margin-top:12px;font-size:12px;line-height:1.45;color:#5a6473;background:#f4fbfc;border:1px solid #dbeef2;border-radius:10px;padding:9px 11px}
+  .revii-tip b{color:#0E7C88}
+  #startCta{margin-top:14px;display:none}
+  .start-hint{margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center;line-height:1.4}
+  .manage-link{display:block;margin:10px auto 0;border:none;background:none;color:var(--orange);font-weight:700;font-size:13.5px;cursor:pointer}
+  #actionRow{display:none;margin-top:12px}
+  .skip-btn{width:100%;border:1px solid var(--line);background:#fff;color:#3a4150;border-radius:12px;padding:11px;font-size:14px;font-weight:700;cursor:pointer}
+  .mrow{display:flex;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid var(--line)}
+  .mrow:last-child{border-bottom:none}
+  .mrow .mnum{width:24px;height:24px;border-radius:50%;background:var(--orange);color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .mrow.off{opacity:.45}
+  .mrow .mname{flex:1;font-size:14px;font-weight:600}
+  .mrow .mstart{border:1px solid var(--orange);background:#fff;color:var(--orange);font-size:11.5px;font-weight:700;border-radius:999px;padding:5px 9px;cursor:pointer;white-space:nowrap}
+  .mrow .mstart.on{background:var(--orange);color:#fff}
+  .mrow .mtog{border:none;background:#eef0f4;width:30px;height:30px;border-radius:8px;font-size:15px;cursor:pointer;flex:0 0 auto}
+  .lbtn.go{background:#10b981;color:#fff}
+  .status{position:absolute;top:54px;left:50%;transform:translateX(-50%);z-index:18;pointer-events:none;background:rgba(29,34,48,.92);color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:14px;max-width:86%;text-align:center;line-height:1.35;white-space:normal;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+  .status.warn{background:#c2410c}
+  /* SHEET */
+  .sheet{position:relative;background:var(--card);border-top-left-radius:20px;border-top-right-radius:20px;box-shadow:var(--shadow);padding:14px 16px 18px;z-index:40;overflow-y:auto}
+  .grab{height:22px;margin:-6px auto 6px;display:flex;align-items:center;justify-content:center;cursor:row-resize;touch-action:none}
+  .grab::before{content:"";width:48px;height:6px;border-radius:6px;background:var(--orange)}
+  .vgrab{display:none}                       /* vertical divider handle, landscape only */
+  .progwrap{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .progbar{flex:1;height:6px;border-radius:6px;background:#eef0f4;overflow:hidden}
+  .progfill{height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--orange-2));transition:width .4s}
+  .progtxt{font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap}
+  .stoprow{display:flex;align-items:flex-start;gap:12px}
+  .stopemoji{font-size:30px;line-height:1}
+  .stopname{font-size:19px;font-weight:800;letter-spacing:-.3px}
+  .stoptag{font-size:12px;color:var(--orange);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+  .stopdesc{font-size:14.5px;line-height:1.5;color:#3a4150;margin:10px 0 0}
+  .tip{margin-top:10px;font-size:13px;background:#fff7ef;border:1px solid #ffe2c7;color:#8a4b12;padding:9px 11px;border-radius:10px}
+  .tip b{color:var(--orange)}
+  .guide{margin-top:12px;display:flex;gap:10px;background:#f1f8ff;border:1px solid #d8ecff;border-radius:12px;padding:10px 12px}
+  .guide .ava{font-size:20px}
+  .guide .glabel{font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#2f6db0;margin-bottom:2px}
+  .guide .gtxt{font-size:13.5px;line-height:1.45;color:#1f3b56}
+  .nav{display:flex;gap:10px;margin-top:14px}
+  .btn{flex:1;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;cursor:pointer}
+  .btn.prev{background:#eef0f4;color:#444}
+  .btn.next{background:var(--orange);color:#fff}
+  .btn:disabled{opacity:.45}
+  .ask-fab{position:absolute;right:16px;bottom:calc(100% + 14px);padding:12px 16px;border-radius:999px;background:var(--ink);color:#fff;font-weight:700;font-size:14px;border:none;box-shadow:var(--shadow);cursor:pointer;z-index:25}
+  .modal{position:fixed;inset:0;background:rgba(15,18,28,.45);z-index:90;display:none;align-items:flex-end;justify-content:center}
+  .modal.open{display:flex}
+  .chat{width:100%;max-width:480px;background:#fff;border-top-left-radius:20px;border-top-right-radius:20px;display:flex;flex-direction:column;height:70vh}
+  .chat-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .chat-head .ttl{font-weight:800}.chat-head .sub{font-size:12px;color:var(--muted)}
+  .chat-x{margin-left:auto;border:none;background:#eef0f4;width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer}
+  .chat-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .msg{max-width:82%;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.45}
+  .msg.bot{background:#f1f3f7;align-self:flex-start;border-bottom-left-radius:4px}
+  .msg.me{background:var(--orange);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 8px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 12px;font-size:12.5px;cursor:pointer;color:#3a4150}
+  .chat-input{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+  .chat-input input{flex:1;border:1px solid var(--line);border-radius:999px;padding:11px 15px;font-size:14px;outline:none}
+  .chat-input button{border:none;background:var(--orange);color:#fff;border-radius:999px;padding:0 18px;font-weight:700;cursor:pointer}
+  .chat-input button:disabled{opacity:.5}
+  .gear{border:none;background:#eef0f4;width:30px;height:30px;border-radius:50%;font-size:15px;cursor:pointer}
+  .typing{display:inline-flex;gap:4px;align-items:center}
+  .typing span{width:7px;height:7px;border-radius:50%;background:#9aa3af;animation:blink 1.2s infinite}
+  .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
+  /* settings panel */
+  .settings{display:none;flex-direction:column;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);background:#fafbfc}
+  .settings.open{display:flex}
+  .settings label{font-size:12px;font-weight:700;color:#3a4150;display:flex;flex-direction:column;gap:4px}
+  .settings input{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13px;outline:none}
+  .settings .row{display:flex;gap:8px}
+  .settings .save{border:none;background:var(--orange);color:#fff;border-radius:9px;padding:9px 14px;font-weight:700;cursor:pointer}
+  .settings .hint{font-size:11px;color:var(--muted);line-height:1.4}
+  .settings .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+  .badge.live{background:#dcfce7;color:#166534}.badge.off{background:#fee2e2;color:#991b1b}
+  .demo-note{position:fixed;top:8px;left:50%;transform:translateX(-50%);background:#1d2230;color:#fff;font-size:11px;padding:4px 10px;border-radius:999px;z-index:100;opacity:.85}
+  /* ---------- LANDSCAPE (scooter phone mount): map left, info panel right ---------- */
+  @media (orientation: landscape) and (max-height: 600px){
+    #app{display:grid;grid-template-columns:1fr minmax(280px,36%);grid-template-rows:auto 1fr;grid-template-areas:"top top" "map panel";max-width:none}
+    .topbar{grid-area:top}
+    #mapwrap{grid-area:map;min-height:0}
+    .sheet{grid-area:panel;min-height:0;border-radius:0;border-left:1px solid var(--line);overflow-y:auto;box-shadow:none;padding-top:12px;padding-left:22px}
+    .sheet .grab{display:none}
+    .vgrab{display:flex;position:absolute;left:0;top:0;bottom:0;width:18px;align-items:center;justify-content:center;cursor:col-resize;touch-action:none;z-index:6}
+    .vgrab::before{content:"";width:6px;height:48px;border-radius:6px;background:var(--orange)}
+    .ask-fab{position:static;display:block;width:100%;margin:0 0 12px 0;text-align:center}
+    .demo-note{top:auto;bottom:6px}
+    /* chat opens as a full-height right-side panel */
+    .modal{align-items:stretch;justify-content:flex-end}
+    .chat{height:100%;max-width:440px;width:100%;margin-left:auto;border-radius:0}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <button class="backbtn" id="backBtn" title="All tours">‹</button>
+    <img class="logo" id="logoImg" src="https://images.squarespace-cdn.com/content/v1/67fe34693519c73bccd4c3ce/5601bc51-3015-416d-adbd-447ef33cd213/Zoomr+Logo+small.png?format=750w" alt="Zoomr" onerror="this.style.display='none';document.getElementById('logoSvg').style.display='block'"/>
+    <svg class="logo" id="logoSvg" style="display:none" viewBox="0 0 176 60" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Zoomr">
+      <text x="0" y="50" font-family="'Arial Rounded MT Bold','Baloo 2','Quicksand',Verdana,sans-serif" font-weight="700" font-size="52" letter-spacing="-3" fill="#8FCDDB">zoomr</text>
+      <path d="M34 14 C54 2 84 2 96 9" fill="none" stroke="#8FCDDB" stroke-width="8.5" stroke-linecap="round"/>
+      <circle cx="97" cy="8" r="4.6" fill="#8FCDDB"/>
+    </svg>
+    <span class="tourName">· <span id="tourName">Coastal Loop</span></span>
+    <div class="pill" id="pill" style="margin-left:auto">7 km · 1.5–2 hrs</div>
+  </div>
+  <div class="gpsBanner">
+    <span class="gb-txt">📍 For live GPS, open this in your browser</span>
+    <button class="gb-open">Open ›</button>
+    <button class="gb-close" title="Dismiss">×</button>
+  </div>
+  <div id="mapwrap">
+    <div id="scene">
+      <div id="tiles"></div>
+      <svg id="overlay"></svg>
+      <div id="markers"></div>
+    </div>
+    <div class="mapbtns"><button id="zin">+</button><button id="zout">−</button></div>
+    <div class="status" id="status" style="display:none"></div>
+    <div class="livebar">
+      <div class="livebtns">
+        <button class="lbtn icon" id="wholeBtn" title="Whole route" aria-label="Whole route"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5"/><path d="M4 4l6.5 6.5"/><path d="M15 4h5v5"/><path d="M20 4l-6.5 6.5"/><path d="M9 20H4v-5"/><path d="M4 20l6.5-6.5"/><path d="M15 20h5v-5"/><path d="M20 20l-6.5-6.5"/></svg></button>
+        <button class="lbtn icon locate" id="gpsBtn" title="Center on my location" aria-label="My location"><svg viewBox="0 0 24 24"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.9-3.1-7-7-7zm0 9.6A2.6 2.6 0 1112 6.4a2.6 2.6 0 010 5.2z" fill="currentColor"/></svg></button>
+        <button class="lbtn icon" id="voiceBtn" title="Voice guide" aria-label="Voice guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.6L13 19V5L7.6 9.5H4z" fill="currentColor" stroke="none"/><path d="M16.4 8.8a4.6 4.6 0 010 6.4"/><path d="M19 6.3a8 8 0 010 11.4"/></svg></button>
+      </div>
+    </div>
+    <button class="ai-fab" id="askBtn">💬 Guide</button>
+    <div class="attr">© OpenStreetMap</div>
+  </div>
+  <div class="sheet">
+    <div class="vgrab" id="vgrab"></div>
+    <div class="grab"></div>
+    <div class="progwrap">
+      <div class="progbar"><div class="progfill" id="progfill"></div></div>
+      <div class="progtxt" id="progtxt">Stop 1 of 6</div>
+    </div>
+    <div class="stoprow">
+      <div class="stopemoji" id="emoji">☕</div>
+      <div style="flex:1"><div class="stoptag" id="tag"></div><div class="stopname" id="name"></div></div>
+    </div>
+    <p class="stopdesc" id="desc"></p>
+    <div class="tip" id="tip"></div>
+    <div class="next-cue" id="nextCue" style="display:none"></div>
+    <div class="revii-tip">🛴 Control your scooter in the <b>Revii app</b> — tap <b>Pause Ride</b> while you explore a stop for a cheaper rate (it locks the scooter until you unpause).</div>
+    <div id="startCta">
+      <button class="btn next" id="previewBtn" style="width:100%">▶ Preview tour</button>
+      <button class="btn next" id="startBtn" style="width:100%;margin-top:10px">▶ Start tour</button>
+      <button id="manageBtn" class="manage-link">⚙ Manage route</button>
+      <div class="start-hint" id="startHint"></div>
+    </div>
+    <div id="actionRow">
+      <button id="skipBtn" class="skip-btn">↷ Skip next stop</button>
+      <button id="previewEndBtn" class="skip-btn" style="display:none">✕ End preview</button>
+      <button id="endNowBtn" class="btn next" style="width:100%;display:none">✓ End tour</button>
+    </div>
+    <div class="nav"><button class="btn prev" id="prev">‹ Back</button><button class="btn next" id="next">Next stop ›</button></div>
+  </div>
+</div>
+
+<div class="modal" id="manageModal"><div class="chat" style="height:auto;max-height:80vh">
+  <div class="chat-head"><div style="font-size:20px">🛠️</div>
+    <div style="flex:1"><div class="ttl">Manage route</div><div class="sub">Choose your start & remove stops</div></div>
+    <button class="chat-x" id="manageX">×</button></div>
+  <div id="manageList" style="overflow-y:auto;padding:10px 14px"></div>
+  <div style="padding:12px 14px;border-top:1px solid var(--line)">
+    <button class="btn next" id="manageApply" style="width:100%">Apply</button>
+  </div>
+</div></div>
+
+<div class="modal" id="reviiModal"><div class="chat" style="height:auto;max-height:75vh">
+  <div class="chat-head"><div style="font-size:20px">🛴</div>
+    <div style="flex:1"><div class="ttl">Before you roll</div><div class="sub">How the apps work together</div></div>
+    <button class="chat-x" id="reviiX">×</button></div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.5;color:#3a4150">
+    <p style="margin:0">This is your <b>tour guide</b> — it shows the route, stops and facts. To actually <b>control the scooter</b> (start, pause, or end your rental), use the <b>Revii app</b>.</p>
+    <p style="margin:0;background:#eef9fa;border:1px solid #d8ecff;border-radius:12px;padding:11px 13px">💡 <b>Tip:</b> Stopping to enjoy a stop? Tap <b>Pause Ride</b> in Revii — you'll get a cheaper rate and the scooter locks until you unpause.</p>
+    <button class="btn next" id="reviiOk" style="width:100%">Got it</button>
+  </div>
+</div></div>
+
+<div class="modal" id="endModal"><div class="chat" style="height:auto;max-height:72vh">
+  <div class="chat-head"><div style="font-size:20px">🎉</div>
+    <div style="flex:1"><div class="ttl">Tour complete!</div><div class="sub">Nice ride</div></div>
+    <button class="chat-x" id="endX">×</button></div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+    <p style="margin:0;font-size:14px;line-height:1.5;color:#3a4150">You've reached the last stop! When you're done riding, head back to the <b>Zoomr Zone</b> and end your scooter rental in the <b>Revii app</b> (this guide doesn't control the scooter).</p>
+    <button class="btn next" id="endReturnBtn" style="width:100%">🔚 Guide me back to the Zoomr Zone</button>
+    <button class="skip-btn" id="endTourBtn">End tour</button>
+  </div>
+</div></div>
+
+<div id="picker">
+  <div class="picker-inner">
+    <div class="picker-head">
+      <img class="picker-logo" id="logoImgP" src="https://images.squarespace-cdn.com/content/v1/67fe34693519c73bccd4c3ce/5601bc51-3015-416d-adbd-447ef33cd213/Zoomr+Logo+small.png?format=1000w" alt="Zoomr" onerror="this.style.display='none';document.getElementById('logoSvgP').style.display='inline-block'"/>
+      <svg class="picker-logo" id="logoSvgP" style="display:none" viewBox="0 0 176 60" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Zoomr">
+        <text x="0" y="50" font-family="'Arial Rounded MT Bold','Baloo 2','Quicksand',Verdana,sans-serif" font-weight="700" font-size="52" letter-spacing="-3" fill="#8FCDDB">zoomr</text>
+        <path d="M34 14 C54 2 84 2 96 9" fill="none" stroke="#8FCDDB" stroke-width="8.5" stroke-linecap="round"/>
+        <circle cx="97" cy="8" r="4.6" fill="#8FCDDB"/>
+      </svg>
+      <div class="picker-sub">Self-guided e-scooter tours · Victoria, BC</div>
+    </div>
+    <div class="gpsBanner pick">
+      <span class="gb-txt">📍 For live GPS, open this in your browser</span>
+      <button class="gb-open">Open ›</button>
+      <button class="gb-close" title="Dismiss">×</button>
+    </div>
+    <div id="tourCards"></div>
+    <div class="picker-foot">Pick a tour to begin · sample content shown</div>
+    <div id="devTools" style="display:none;text-align:center;margin-top:8px"><input type="file" id="devLoad" accept=".json,application/json" style="display:none"><button id="devLoadBtn" style="background:none;border:none;color:#9aa3af;font-size:11px;text-decoration:underline;cursor:pointer">Load tours.json (local testing)</button> <span id="devLoadMsg" style="font-size:11px;color:#10b981"></span></div>
+  </div>
+  <button class="ai-fab-picker" id="askBtnPicker">💬 Ask the Guide</button>
+</div>
+
+<div class="modal" id="modal"><div class="chat">
+  <div class="chat-head"><div style="font-size:22px">🧭</div>
+    <div style="flex:1"><div class="ttl">Ask the Guide</div><div class="sub" id="chatSub">Powered by Claude · <span id="modeBadge" class="badge off">offline</span></div></div>
+    <button class="gear" id="gearBtn" title="AI settings">⚙</button>
+    <button class="chat-x" id="chatX">×</button></div>
+  <div class="settings" id="settings">
+    <label>Anthropic API key (test mode — stays in your browser)
+      <input id="cfgKey" type="password" placeholder="sk-ant-..." autocomplete="off"/></label>
+    <label>Backend endpoint (optional — for the live site, leave key blank)
+      <input id="cfgEndpoint" type="text" placeholder="https://your-worker.workers.dev" autocomplete="off"/></label>
+    <label>Model
+      <input id="cfgModel" type="text" placeholder="claude-haiku-4-5-20251001"/></label>
+    <div class="row"><button class="save" id="cfgSave">Save</button></div>
+    <div class="hint">Test mode calls Claude directly from your browser using your key — fine for your own testing, not for a public page. For the Zoomr site, deploy the included proxy and put its URL in “Backend endpoint” (then no key lives in the browser).</div>
+  </div>
+  <div class="chat-body" id="chatBody"></div>
+  <div class="chips" id="chips"></div>
+  <div class="chat-input"><input id="chatInput" placeholder="Ask anything about the city…" autocomplete="off"/><button id="sendBtn">Send</button></div>
+</div></div>
+<div class="demo-note">PROTOTYPE · sample content</div>
+
+<script>
+let TOURS = [{"id": "coastal", "emoji": "🌊", "color": "#0288D1", "tour": {"name": "Coastal Loop Tour", "city": "Victoria, BC", "distanceKm": 7, "durationText": "1.5–2 hrs", "company": "Zoomr"}, "km": 7, "dur": "1.5–2 hrs", "route": [[48.42938, -123.36667], [48.42938, -123.36678], [48.42938, -123.36708], [48.42904, -123.36707], [48.4289, -123.36707], [48.42876, -123.36706], [48.42861, -123.36705], [48.42861, -123.36728], [48.42861, -123.36757], [48.4286, -123.3679], [48.42859, -123.36823], [48.42859, -123.36836], [48.42859, -123.36845], [48.42859, -123.36849], [48.42859, -123.36861], [48.42859, -123.36872], [48.42859, -123.36898], [48.42858, -123.36906], [48.42857, -123.36914], [48.42857, -123.36916], [48.42856, -123.36919], [48.42856, -123.36936], [48.42856, -123.36953], [48.42857, -123.36959], [48.42858, -123.36967], [48.4285, -123.36972], [48.4283, -123.3698], [48.428, -123.36996], [48.4279, -123.37002], [48.42779, -123.37009], [48.42772, -123.37013], [48.42752, -123.37022], [48.42742, -123.37025], [48.42733, -123.37028], [48.42719, -123.37031], [48.42707, -123.37031], [48.42699, -123.37031], [48.4269, -123.3703], [48.42687, -123.37029], [48.42673, -123.37026], [48.42666, -123.37025], [48.42658, -123.37022], [48.42623, -123.37007], [48.42605, -123.37], [48.42604, -123.37], [48.42602, -123.36999], [48.42593, -123.36996], [48.42574, -123.36989], [48.4257, -123.36988], [48.42568, -123.36987], [48.42562, -123.36986], [48.42556, -123.36985], [48.42549, -123.36984], [48.42512, -123.36979], [48.42509, -123.36979], [48.42487, -123.36976], [48.42482, -123.36976], [48.42471, -123.36974], [48.42438, -123.36971], [48.42435, -123.36971], [48.42425, -123.36969], [48.42418, -123.36968], [48.42411, -123.36967], [48.42404, -123.36964], [48.42399, -123.36962], [48.42395, -123.3696], [48.42389, -123.36957], [48.4238, -123.36953], [48.42375, -123.36951], [48.42368, -123.36948], [48.42355, -123.36943], [48.42347, -123.36938], [48.4234, -123.36934], [48.42335, -123.36932], [48.42329, -123.36923], [48.42324, -123.36918], [48.42319, -123.3691], [48.42317, -123.36906], [48.42313, -123.36898], [48.42312, -123.36896], [48.42311, -123.36893], [48.42309, -123.36888], [48.42306, -123.36876], [48.42303, -123.36867], [48.423, -123.36858], [48.42295, -123.36847], [48.42291, -123.36836], [48.42282, -123.36836], [48.42278, -123.36836], [48.42267, -123.36838], [48.42254, -123.36842], [48.42203, -123.36854], [48.42174, -123.36861], [48.42117, -123.36875], [48.42101, -123.36878], [48.42087, -123.36882], [48.42067, -123.36888], [48.4204, -123.36889], [48.41968, -123.36887], [48.41904, -123.36886], [48.41858, -123.36884], [48.41828, -123.36883], [48.41824, -123.36947], [48.41822, -123.36981], [48.41817, -123.37066], [48.41807, -123.372], [48.41807, -123.37202], [48.41807, -123.37245], [48.4184, -123.37333], [48.41851, -123.37362], [48.41893, -123.37474], [48.41896, -123.37482], [48.41902, -123.37496], [48.41959, -123.37633], [48.42055, -123.3783], [48.42106, -123.37936], [48.42128, -123.37983], [48.42189, -123.38116], [48.42165, -123.3814], [48.42169, -123.38148], [48.42179, -123.3817], [48.42186, -123.38185], [48.42197, -123.38208], [48.42204, -123.38222], [48.4221, -123.38236], [48.42221, -123.38257], [48.42232, -123.38279], [48.42242, -123.383], [48.42242, -123.38301], [48.42246, -123.38313], [48.42246, -123.38315], [48.42258, -123.38376], [48.42244, -123.38393], [48.42222, -123.38419], [48.42215, -123.38426], [48.42204, -123.38434], [48.42196, -123.38438], [48.42196, -123.38443], [48.42196, -123.38447], [48.42195, -123.38449], [48.42195, -123.3845], [48.42194, -123.38452], [48.42192, -123.38455], [48.42189, -123.38459], [48.42168, -123.3848], [48.42158, -123.38489], [48.42123, -123.38529], [48.42123, -123.3853], [48.42094, -123.38562], [48.42076, -123.38583], [48.42071, -123.38586], [48.42063, -123.38589], [48.42059, -123.3859], [48.42045, -123.3859], [48.42044, -123.3859], [48.42009, -123.38578], [48.42003, -123.38576], [48.41974, -123.38566], [48.41904, -123.38541], [48.41863, -123.38526], [48.41828, -123.38527], [48.4181, -123.38538], [48.418, -123.38537], [48.41799, -123.38537], [48.4177, -123.38527], [48.4175, -123.38522], [48.41741, -123.38519], [48.41718, -123.38512], [48.41706, -123.38509], [48.41699, -123.38507], [48.4165, -123.38493], [48.41608, -123.38478], [48.41601, -123.38474], [48.41596, -123.38471], [48.41591, -123.38467], [48.41585, -123.38462], [48.41578, -123.38454], [48.41573, -123.38449], [48.41569, -123.38445], [48.41533, -123.38395], [48.41529, -123.3839], [48.41526, -123.3839], [48.41521, -123.3839], [48.41518, -123.38388], [48.41516, -123.38386], [48.41512, -123.3838], [48.41498, -123.38357], [48.41482, -123.38333], [48.4147, -123.38314], [48.41461, -123.38301], [48.41457, -123.38295], [48.41436, -123.38262], [48.41429, -123.38251], [48.41422, -123.38241], [48.41417, -123.38235], [48.41412, -123.38228], [48.41406, -123.38216], [48.41406, -123.38215], [48.41395, -123.38194], [48.4139, -123.38182], [48.41375, -123.3815], [48.41368, -123.38136], [48.41365, -123.38131], [48.41364, -123.38127], [48.41361, -123.38119], [48.41353, -123.38103], [48.41339, -123.38072], [48.41333, -123.3806], [48.41316, -123.38026], [48.41305, -123.38003], [48.41298, -123.37988], [48.41305, -123.37981], [48.41265, -123.37898], [48.41253, -123.37874], [48.41241, -123.37849], [48.41237, -123.3784], [48.412, -123.37761], [48.41165, -123.37679], [48.41142, -123.37629], [48.41072, -123.3748], [48.41046, -123.37429], [48.41042, -123.37423], [48.41028, -123.37394], [48.40996, -123.37328], [48.40942, -123.37213], [48.409, -123.37087], [48.40873, -123.36987], [48.40872, -123.36983], [48.4087, -123.3697], [48.4087, -123.36964], [48.4087, -123.36961], [48.4087, -123.36954], [48.40871, -123.3695], [48.40873, -123.36943], [48.40875, -123.36935], [48.40879, -123.36926], [48.40888, -123.36895], [48.40893, -123.36773], [48.40894, -123.3674], [48.40891, -123.36704], [48.40888, -123.36693], [48.40875, -123.36651], [48.40874, -123.36644], [48.40857, -123.36552], [48.40853, -123.36512], [48.40851, -123.36491], [48.40848, -123.36457], [48.40847, -123.36432], [48.40849, -123.36401], [48.40848, -123.36392], [48.40848, -123.36383], [48.40846, -123.36356], [48.40841, -123.36293], [48.40839, -123.36289], [48.40821, -123.36257], [48.40815, -123.36237], [48.40812, -123.36228], [48.4081, -123.36216], [48.4081, -123.36201], [48.40811, -123.36173], [48.40813, -123.36146], [48.40814, -123.36137], [48.40813, -123.36114], [48.40802, -123.36068], [48.408, -123.36059], [48.40769, -123.35939], [48.40767, -123.35916], [48.40765, -123.35878], [48.40767, -123.35838], [48.40777, -123.35791], [48.40778, -123.35788], [48.40778, -123.35773], [48.4078, -123.35759], [48.40779, -123.35721], [48.40775, -123.35654], [48.40773, -123.35631], [48.40761, -123.35587], [48.40753, -123.35568], [48.40746, -123.35539], [48.40724, -123.35451], [48.40723, -123.3544], [48.40721, -123.35427], [48.40715, -123.35409], [48.40686, -123.35337], [48.40659, -123.35271], [48.40652, -123.35255], [48.40648, -123.35249], [48.40643, -123.3524], [48.40636, -123.3523], [48.40591, -123.35112], [48.4059, -123.35105], [48.40587, -123.35086], [48.40583, -123.3506], [48.4058, -123.35043], [48.40578, -123.35033], [48.40576, -123.35026], [48.40575, -123.35016], [48.40572, -123.35002], [48.40572, -123.34991], [48.40572, -123.34983], [48.40574, -123.34976], [48.40574, -123.34972], [48.40576, -123.34966], [48.40577, -123.34961], [48.40577, -123.3496], [48.40567, -123.34959], [48.40546, -123.34964], [48.4053, -123.34967], [48.4052, -123.34968], [48.40513, -123.34967], [48.40495, -123.34965], [48.40495, -123.34964], [48.40483, -123.34962], [48.40468, -123.34959], [48.40457, -123.34958], [48.40447, -123.34953], [48.40428, -123.34962], [48.40425, -123.34964], [48.40409, -123.34965], [48.40348, -123.3495], [48.40331, -123.34945], [48.40325, -123.3494], [48.4032, -123.34932], [48.40317, -123.34922], [48.40316, -123.34903], [48.40319, -123.34889], [48.4032, -123.34886], [48.40323, -123.34879], [48.40325, -123.34877], [48.40327, -123.34874], [48.40332, -123.34871], [48.4034, -123.34867], [48.40347, -123.34866], [48.40359, -123.34873], [48.40371, -123.34883], [48.40391, -123.34903], [48.40422, -123.3493], [48.40434, -123.34943], [48.40447, -123.34953], [48.40457, -123.34958], [48.40468, -123.34959], [48.40483, -123.34962], [48.40495, -123.34964], [48.40495, -123.34965], [48.40513, -123.34967], [48.4052, -123.34968], [48.4053, -123.34967], [48.40546, -123.34964], [48.40567, -123.34959], [48.40577, -123.3496], [48.40577, -123.34961], [48.40576, -123.34966], [48.40574, -123.34972], [48.40574, -123.34976], [48.40572, -123.34983], [48.40572, -123.34991], [48.40572, -123.35002], [48.40575, -123.35016], [48.40576, -123.35026], [48.40578, -123.35033], [48.4058, -123.35043], [48.40583, -123.3506], [48.40587, -123.35086], [48.4059, -123.35105], [48.40591, -123.35112], [48.40636, -123.3523], [48.40643, -123.3524], [48.40648, -123.35249], [48.40652, -123.35255], [48.40659, -123.35271], [48.40686, -123.35337], [48.40715, -123.35409], [48.40721, -123.35427], [48.40723, -123.3544], [48.40724, -123.35451], [48.40746, -123.35539], [48.40753, -123.35568], [48.40761, -123.35587], [48.40773, -123.35631], [48.40775, -123.35654], [48.40779, -123.35721], [48.4078, -123.35759], [48.40778, -123.35773], [48.40778, -123.35788], [48.40777, -123.35791], [48.40767, -123.35838], [48.40765, -123.35878], [48.40767, -123.35916], [48.40769, -123.35939], [48.408, -123.36059], [48.40802, -123.36068], [48.40813, -123.36114], [48.40814, -123.36137], [48.40813, -123.36146], [48.40811, -123.36173], [48.4081, -123.36201], [48.4081, -123.36216], [48.40812, -123.36228], [48.40815, -123.36237], [48.40826, -123.36232], [48.40833, -123.36222], [48.4084, -123.36212], [48.4085, -123.36202], [48.40867, -123.3617], [48.40872, -123.36163], [48.40876, -123.36159], [48.40886, -123.36143], [48.40899, -123.36131], [48.40918, -123.36115], [48.4093, -123.3611], [48.40931, -123.3611], [48.40949, -123.36106], [48.40968, -123.36107], [48.41001, -123.3611], [48.41016, -123.36114], [48.41021, -123.36115], [48.41038, -123.36119], [48.41052, -123.3613], [48.41069, -123.36147], [48.4107, -123.36148], [48.41083, -123.36163], [48.41115, -123.362], [48.41122, -123.36212], [48.41177, -123.36312], [48.41179, -123.36317], [48.41182, -123.36323], [48.41224, -123.36412], [48.41268, -123.3642], [48.41299, -123.36421], [48.41312, -123.36418], [48.41331, -123.36412], [48.41345, -123.36404], [48.41347, -123.36402], [48.41363, -123.36391], [48.41364, -123.36391], [48.41379, -123.3637], [48.41391, -123.36348], [48.41394, -123.36357], [48.414, -123.36366], [48.41409, -123.36382], [48.41429, -123.36407], [48.41454, -123.36439], [48.41469, -123.36449], [48.41473, -123.36451], [48.4148, -123.36455], [48.41487, -123.36458], [48.41498, -123.36457], [48.41508, -123.36456], [48.41514, -123.36455], [48.41526, -123.36453], [48.41528, -123.36453], [48.41534, -123.36454], [48.41541, -123.36454], [48.41555, -123.36458], [48.41578, -123.36476], [48.4159, -123.36494], [48.41593, -123.36498], [48.416, -123.36507], [48.41604, -123.36511], [48.41609, -123.36513], [48.41618, -123.36513], [48.4164, -123.36512], [48.41644, -123.36512], [48.41676, -123.36512], [48.41683, -123.36512], [48.41694, -123.36513], [48.41699, -123.36513], [48.41709, -123.36515], [48.41721, -123.36521], [48.41725, -123.36525], [48.41727, -123.36528], [48.4173, -123.36534], [48.41731, -123.36539], [48.41733, -123.36548], [48.41734, -123.36553], [48.41738, -123.3658], [48.4173, -123.36687], [48.41728, -123.36713], [48.41727, -123.36725], [48.41726, -123.36735], [48.41725, -123.36748], [48.41723, -123.36775], [48.4172, -123.36821], [48.41718, -123.36887], [48.41828, -123.36883], [48.41858, -123.36884], [48.41904, -123.36886], [48.41968, -123.36887], [48.4204, -123.36889], [48.42067, -123.36888], [48.42087, -123.36882], [48.42101, -123.36878], [48.42117, -123.36875], [48.42174, -123.36861], [48.42203, -123.36854], [48.42254, -123.36842], [48.42267, -123.36838], [48.42278, -123.36836], [48.42282, -123.36836], [48.42291, -123.36836], [48.42355, -123.3682], [48.42422, -123.36803], [48.4249, -123.36786], [48.42503, -123.36783], [48.42531, -123.36777], [48.42569, -123.36768], [48.42598, -123.36761], [48.42622, -123.36756], [48.42662, -123.36746], [48.42674, -123.36743], [48.42736, -123.36725], [48.4275, -123.36723], [48.42778, -123.36717], [48.42829, -123.36709], [48.42855, -123.36704], [48.42861, -123.36705], [48.42876, -123.36706], [48.4289, -123.36707], [48.42904, -123.36707], [48.42938, -123.36708], [48.42938, -123.36678], [48.42938, -123.36667]], "stops": [{"name": "QV Cafe & Bakery - Zoomr Zone", "lat": 48.429384, "lon": -123.366668, "emoji": "☕", "tagline": "Your starting line & Zoomr Zone", "desc": "Grab a coffee and a fresh pastry before you roll out. This is your Zoomr Zone — unlock your Zoomr in the Levy app, snap on your helmet, and meet your virtual guide. The Coastal Loop is a ~7 km mostly-flat ride hugging Victoria's waterfront.", "tip": "Fill your water bottle here — the next café stop isn't until you loop back."}, {"name": "Inner Harbour", "lat": 48.421739, "lon": -123.368645, "emoji": "⛵", "tagline": "The postcard heart of Victoria", "desc": "The Inner Harbour is Victoria's living room: the ivy-covered Fairmont Empress, the floodlit Parliament Buildings, float planes landing on the water, and buskers along the causeway. In summer the harbour fills with kayaks and water taxis.", "tip": "Stay on the lower causeway path — it's car-free and far more scenic than the road above."}, {"name": "Fisherman's Wharf", "lat": 48.422405, "lon": -123.382967, "emoji": "🦭", "tagline": "Floating homes & harbour seals", "desc": "Fisherman's Wharf is a riot of candy-coloured floating homes, food kiosks, and resident harbour seals that pop up looking for a snack. Originally a working fish dock, it's now one of the city's most-loved photo spots.", "tip": "Barb's Fish & Chips is the local legend here — and yes, the seals really will wave."}, {"name": "Dallas Rd Swim Pavillion", "lat": 48.41375, "lon": -123.3815, "emoji": "🏊", "tagline": "Open-water swimming & sea views", "desc": "Dallas Road runs along open ocean with the Olympic Mountains across the strait. The swim pavilion marks a beloved cold-water swimming spot. Expect wind, driftwood beaches, and dogs everywhere on the lower trail.", "tip": "This stretch can be breezy — it's why the kite-flyers love the clifftops above you."}, {"name": "Clover Point", "lat": 48.403373, "lon": -123.349462, "emoji": "🌊", "tagline": "Windswept point jutting into the strait", "desc": "Clover Point pushes out into Juan de Fuca Strait, a favourite for kite-flying, whale-spotting, and watching cargo ships drift past. On a clear day Washington's Olympic Range looks close enough to touch.", "tip": "Pause at the tip — grey whales and orcas are sometimes spotted offshore in spring."}, {"name": "Beacon Hill Park", "lat": 48.415102, "lon": -123.364558, "emoji": "🦚", "tagline": "Gardens, peacocks & Mile 0", "desc": "Beacon Hill Park is 200 acres of gardens, ponds, and roaming peacocks, plus a children's petting farm. Nearby stands Mile 0 of the Trans-Canada Highway and a towering totem pole. It's the green finish before you coast back to the café.", "tip": "Mile 0 and the Terry Fox statue are a 2-minute detour — worth the photo."}], "legs": ["Welcome to the Coastal Loop! Roll out from the café heading toward the water. You'll drop gently downhill toward the Inner Harbour — keep right and enjoy the breeze.", "As you approach the Inner Harbour, look for the float planes — Victoria has one of the busiest seaplane harbours in the world. The Parliament Buildings ahead are outlined by over 3,000 lights every night.", "Rolling on to Fisherman's Wharf now. Fun fact: those floating homes are fully off-grid-ish little communities — some have been here for decades. Watch for seals in the water on your right.", "Heading toward Dallas Road and the open ocean. You're now riding along the Strait of Juan de Fuca — that water separates Canada from the USA, and those snowy peaks are in Washington State.", "On to Clover Point. This whole shoreline is part of a Pacific flyway — keep an eye out for bald eagles and, if you're lucky, a spout offshore. The point gets windy, which is exactly why kite-flyers love it.", "Final stretch into Beacon Hill Park. This park has been a gathering place for thousands of years and is home to one of the world's tallest totem poles. After this, it's an easy cruise back to the café to close the loop."], "qa": [{"k": ["eat", "food", "lunch", "hungry", "coffee", "drink"], "a": "Great eats on this loop: Barb's Fish & Chips at Fisherman's Wharf, the café kiosks along the Inner Harbour causeway, and of course QV Cafe & Bakery at your start/finish. For a sit-down meal, the Inner Harbour has the most options."}, {"k": ["bathroom", "toilet", "washroom", "restroom"], "a": "Public washrooms are available at the Inner Harbour causeway, Fisherman's Wharf, and inside Beacon Hill Park near the petting farm."}, {"k": ["whale", "seal", "wildlife", "animal", "bird"], "a": "Keep your eyes peeled! Harbour seals hang around Fisherman's Wharf, bald eagles soar over Dallas Road, and grey whales or orcas are occasionally spotted off Clover Point in spring and fall."}, {"k": ["history", "old", "built", "founded", "first nation", "indigenous"], "a": "Victoria is the capital of British Columbia, on the traditional territories of the Lekwungen (Songhees and Esquimalt) peoples. The Inner Harbour's Parliament Buildings opened in 1898, and Beacon Hill Park has been a meeting place for thousands of years."}, {"k": ["time", "long", "distance", "how far", "km", "hours"], "a": "The full Coastal Loop is about 7 km and mostly flat. At a relaxed pace with photo stops, plan for 1.5 to 2 hours. Strong riders can do it in under an hour."}, {"k": ["weather", "rain", "wind", "cold"], "a": "Victoria is one of Canada's mildest cities, but the waterfront can be windy — especially around Clover Point and Dallas Road. Bring a light layer even on sunny days."}, {"k": ["park", "lock", "bike rack"], "a": "There are Zoomr Zone racks at the Inner Harbour, Fisherman's Wharf, and Beacon Hill Park. Always lock up — and your Zoomr's GPS lock can be triggered from the app if you step away."}, {"k": ["helmet", "speed", "fast", "rules", "legal", "age", "sidewalk", "license"], "a": "Quick Zoomr rules: helmets are mandatory, top speed is 25 km/h, single rider only, and you ride in bike lanes or as far right as practical — no sidewalks. Minimum age 16."}, {"k": ["park", "lock", "dock", "return", "zoomr zone", "hub", "end ride"], "a": "Zoomrs start and end at a Zoomr Zone hub (the pilot hub is at QV Cafe & Bakery). Lock to the rack when you're done — ending a ride outside a Zone adds fees."}], "blurb": "Victoria's greatest-hits waterfront loop — the Inner Harbour, Fisherman's Wharf, open-ocean shoreline and Beacon Hill Park. Flat, scenic and easy.", "turns": {"edits": {"6": {"text": "Turn right onto pandora"}, "24": {"text": "Cross the street turn left onto Wharf St. bike path"}, "118": {"off": true}, "161": {"off": true}, "211": {"off": true}, "252": {"off": true}, "304": {"text": "Turn right down to Clover Point"}, "322": {"off": true}, "349": {"text": "Turn left down dallas road waterfront trail"}, "398": {"text": "turn right to head into beacon hill park"}, "471": {"off": true}, "483": {"ni": 481}}, "added": [{"i": 2, "lat": 48.42938, "lon": -123.36708, "angle": -91.22637445978035, "text": "Turn left down Government"}, {"i": 96, "lat": 48.42067, "lon": -123.36888, "angle": -10.25658942643372, "text": "Continue straight on Government"}, {"i": 117, "lat": 48.42189, "lon": -123.38116, "angle": -50.81412874124146, "text": "Turn left then right into fisherman's Wharf"}, {"i": 180, "lat": 48.41529, "lon": -123.3839, "angle": 34.788030629162904, "text": "Bear right onto Dallas Road waterfront trail"}, {"i": 474, "lat": 48.41734, "lon": -123.36553, "angle": -20.83240366043617, "text": "Continue straight down Michigan"}, {"i": 519, "lat": 48.42938, "lon": -123.36708, "angle": -91.22637445978035, "text": "Turn right"}]}}, {"id": "gorge", "emoji": "🚲", "color": "#2E7D32", "tour": {"name": "Gorge & The Goose Loop", "city": "Victoria, BC", "distanceKm": 14, "durationText": "1.5–2.5 hrs", "company": "Zoomr"}, "km": 14, "dur": "1.5–2.5 hrs", "route": [[48.42938, -123.36678], [48.42938, -123.36708], [48.4289, -123.36707], [48.42861, -123.36705], [48.42859, -123.36898], [48.42857, -123.36916], [48.42856, -123.36919], [48.428539, -123.369507], [48.428544, -123.369578], [48.428552, -123.369673], [48.428566, -123.370119], [48.428544, -123.370889], [48.428507, -123.371376], [48.428481, -123.371717], [48.428428, -123.372041], [48.428302, -123.372801], [48.428276, -123.37307], [48.428286, -123.373268], [48.428302, -123.37344], [48.428315, -123.373548], [48.428319, -123.373611], [48.428323, -123.373674], [48.428343, -123.373765], [48.428368, -123.374116], [48.42836, -123.37413], [48.42829, -123.37415], [48.42829, -123.37416], [48.42825, -123.37417], [48.42808, -123.37424], [48.42807, -123.37424], [48.42795, -123.37428], [48.42794, -123.37429], [48.42792, -123.3743], [48.4279, -123.37432], [48.42788, -123.37436], [48.42788, -123.37439], [48.42787, -123.37441], [48.42784, -123.37469], [48.42784, -123.37478], [48.42781, -123.375], [48.42781, -123.37504], [48.42774, -123.37553], [48.42774, -123.37557], [48.42773, -123.37561], [48.42747, -123.3774], [48.42743, -123.37752], [48.42737, -123.37783], [48.42729, -123.37878], [48.42729, -123.37896], [48.4273, -123.3791], [48.4274, -123.3798], [48.42745, -123.38001], [48.42765, -123.38054], [48.4278, -123.38081], [48.42805, -123.38117], [48.42824, -123.38138], [48.42846, -123.38159], [48.42864, -123.38181], [48.42878, -123.38209], [48.42884, -123.38225], [48.42893, -123.38262], [48.4292, -123.3843], [48.42922, -123.38436], [48.42932, -123.38454], [48.4294, -123.38462], [48.42949, -123.38469], [48.42959, -123.38471], [48.43004, -123.38471], [48.43005, -123.38532], [48.43011, -123.3858], [48.43016, -123.38606], [48.43016, -123.38613], [48.43024, -123.38717], [48.430354, -123.387276], [48.430399, -123.387796], [48.430414, -123.387924], [48.430457, -123.388084], [48.430478, -123.388257], [48.430496, -123.388432], [48.430507, -123.388567], [48.430617, -123.388568], [48.43064, -123.38858], [48.43067, -123.38861], [48.43086, -123.38893], [48.43112, -123.38928], [48.43128, -123.38944], [48.43134, -123.38948], [48.43144, -123.38958], [48.4315, -123.38963], [48.43173, -123.38979], [48.43206, -123.38993], [48.43237, -123.39008], [48.4324, -123.39009], [48.43243, -123.39008], [48.43244, -123.39007], [48.43245, -123.39005], [48.43245, -123.39004], [48.43247, -123.39004], [48.43251, -123.39005], [48.43272, -123.39023], [48.43297, -123.39053], [48.43298, -123.39056], [48.43313, -123.39078], [48.43332, -123.39119], [48.43343, -123.39148], [48.43358, -123.39195], [48.43359, -123.39196], [48.43374, -123.39244], [48.43375, -123.39249], [48.43452, -123.39488], [48.43456, -123.39503], [48.43498, -123.39632], [48.43498, -123.39634], [48.43538, -123.39756], [48.43545, -123.39781], [48.43573, -123.39866], [48.43584, -123.39883], [48.43585, -123.39886], [48.43588, -123.39891], [48.43588, -123.39893], [48.43589, -123.39898], [48.43589, -123.39918], [48.43693, -123.40242], [48.43699, -123.40256], [48.43708, -123.40289], [48.43785, -123.40532], [48.438, -123.40599], [48.43805, -123.40611], [48.43808, -123.40614], [48.43813, -123.40622], [48.43814, -123.40654], [48.4382, -123.40725], [48.43821, -123.40758], [48.43819, -123.40788], [48.43817, -123.40791], [48.43815, -123.40796], [48.43814, -123.40801], [48.43723, -123.41671], [48.43722, -123.41697], [48.43725, -123.41818], [48.437297, -123.418626], [48.437288, -123.418759], [48.437299, -123.418884], [48.437246, -123.419409], [48.437262, -123.419677], [48.437238, -123.419758], [48.437272, -123.419881], [48.43729, -123.419973], [48.437309, -123.41999], [48.437365, -123.419991], [48.437398, -123.420019], [48.437415, -123.420105], [48.4374, -123.42021], [48.43741, -123.42025], [48.43747, -123.42107], [48.43747, -123.42116], [48.43762, -123.4229], [48.43763, -123.42325], [48.43787, -123.42643], [48.43793, -123.42676], [48.43801, -123.42707], [48.43805, -123.42719], [48.43805, -123.42721], [48.43813, -123.42742], [48.43824, -123.42765], [48.4384, -123.42791], [48.43846, -123.42799], [48.4386, -123.42815], [48.43863, -123.42817], [48.43871, -123.42825], [48.43895, -123.42842], [48.43895, -123.42843], [48.43896, -123.42843], [48.43959, -123.42886], [48.43965, -123.42891], [48.4397, -123.42894], [48.43975, -123.42898], [48.43977, -123.42899], [48.4398, -123.42902], [48.43992, -123.42909], [48.43993, -123.4291], [48.43993, -123.42911], [48.43999, -123.42914], [48.4401, -123.42921], [48.44025, -123.42929], [48.44031, -123.42931], [48.44036, -123.42934], [48.4404, -123.42935], [48.44046, -123.42938], [48.44073, -123.42944], [48.44104, -123.42945], [48.44118, -123.42944], [48.44118, -123.42943], [48.44136, -123.4294], [48.44259, -123.42905], [48.4426, -123.42905], [48.44303, -123.42892], [48.44312, -123.4289], [48.44319, -123.42887], [48.44323, -123.42884], [48.44346, -123.4287], [48.44346, -123.42869], [48.44392, -123.4284], [48.44403, -123.42832], [48.44414, -123.42826], [48.44421, -123.42824], [48.44426, -123.42821], [48.44427, -123.4282], [48.44439, -123.42815], [48.44443, -123.42812], [48.44451, -123.42808], [48.44559, -123.42738], [48.44573, -123.4273], [48.44595, -123.42715], [48.44623, -123.42698], [48.44628, -123.42696], [48.44632, -123.42695], [48.44635, -123.42695], [48.44639, -123.42697], [48.44643, -123.42701], [48.44644, -123.42705], [48.44644, -123.42706], [48.446445, -123.427095], [48.446447, -123.427132], [48.446448, -123.42722], [48.446452, -123.427688], [48.446421, -123.428237], [48.446398, -123.428911], [48.446414, -123.430078], [48.446413, -123.430292], [48.446406, -123.43037], [48.4464, -123.430481], [48.446413, -123.430566], [48.446504, -123.430655], [48.44655, -123.4307], [48.4466, -123.43075], [48.44679, -123.4309], [48.44719, -123.43117], [48.44744, -123.43129], [48.44771, -123.43138], [48.44773, -123.43139], [48.44943, -123.43198], [48.44957, -123.43202], [48.44981, -123.43207], [48.44984, -123.43207], [48.44997, -123.43209], [48.45032, -123.43208], [48.45049, -123.43205], [48.45071, -123.43199], [48.45073, -123.43198], [48.45089, -123.43193], [48.45188, -123.43144], [48.45191, -123.43162], [48.45196, -123.43159], [48.45206, -123.43156], [48.45212, -123.43155], [48.45221, -123.43157], [48.45229, -123.43163], [48.45237, -123.43171], [48.45252, -123.43192], [48.45256, -123.43194], [48.4526, -123.43195], [48.452652, -123.431941], [48.452673, -123.431204], [48.452672, -123.430842], [48.45267, -123.430614], [48.452655, -123.430065], [48.452616, -123.429493], [48.452604, -123.429373], [48.452592, -123.429263], [48.452448, -123.4274], [48.452371, -123.426946], [48.452242, -123.426582], [48.45205, -123.42628], [48.45183, -123.42597], [48.451787, -123.425903], [48.451707, -123.425793], [48.451302, -123.425229], [48.45118, -123.42504], [48.451146, -123.425015], [48.451127, -123.424994], [48.451047, -123.424891], [48.450926, -123.424731], [48.451092, -123.424567], [48.45114, -123.424539], [48.451244, -123.42441], [48.451545, -123.424043], [48.451893, -123.423501], [48.451934, -123.423433], [48.45245, -123.422502], [48.452534, -123.422306], [48.452599, -123.422178], [48.452662, -123.422115], [48.452781, -123.421885], [48.453123, -123.421224], [48.453297, -123.420895], [48.453417, -123.420665], [48.453389, -123.420519], [48.45332, -123.420394], [48.453294, -123.420275], [48.453266, -123.420156], [48.453157, -123.41974], [48.453075, -123.419578], [48.453008, -123.419381], [48.453003, -123.419318], [48.452982, -123.419254], [48.452855, -123.418973], [48.452489, -123.418136], [48.452132, -123.417337], [48.451775, -123.416503], [48.451652, -123.416162], [48.451599, -123.416067], [48.451557, -123.415912], [48.451516, -123.41577], [48.451498, -123.415651], [48.451286, -123.415076], [48.45113, -123.414739], [48.450387, -123.413471], [48.450307, -123.41316], [48.450297, -123.412899], [48.450315, -123.412757], [48.450346, -123.412606], [48.450506, -123.412161], [48.450629, -123.411731], [48.450637, -123.411517], [48.450625, -123.411371], [48.450587, -123.4111], [48.45033, -123.409666], [48.450229, -123.409255], [48.450187, -123.409193], [48.45016, -123.409121], [48.450122, -123.409015], [48.450076, -123.408891], [48.450041, -123.408738], [48.449837, -123.408358], [48.449609, -123.408034], [48.449479, -123.407847], [48.449342, -123.407624], [48.449232, -123.407379], [48.449166, -123.407142], [48.449143, -123.407005], [48.449136, -123.406914], [48.449134, -123.406857], [48.449135, -123.406543], [48.449162, -123.40612], [48.44919, -123.405803], [48.449194, -123.405633], [48.449177, -123.40543], [48.449147, -123.405234], [48.449124, -123.405152], [48.449096, -123.405071], [48.449076, -123.404981], [48.44905, -123.404892], [48.449017, -123.404765], [48.449001, -123.40464], [48.448886, -123.404291], [48.448831, -123.404128], [48.448644, -123.403722], [48.448393, -123.403174], [48.44834, -123.40304], [48.448298, -123.402943], [48.448178, -123.402594], [48.448077, -123.402256], [48.447982, -123.401897], [48.447858, -123.401391], [48.447754, -123.401022], [48.447685, -123.400824], [48.44762, -123.40073], [48.447511, -123.400637], [48.447359, -123.400641], [48.447252, -123.400613], [48.447167, -123.400578], [48.44711, -123.40057], [48.447047, -123.400543], [48.446803, -123.400463], [48.446546, -123.40042], [48.446419, -123.400422], [48.446236, -123.40047], [48.446178, -123.400494], [48.446105, -123.400537], [48.445912, -123.400646], [48.445802, -123.40071], [48.445386, -123.400961], [48.44523, -123.40104], [48.445189, -123.401056], [48.445046, -123.401153], [48.444839, -123.401268], [48.444404, -123.401438], [48.44325, -123.40175], [48.4415, -123.39436], [48.44146, -123.39404], [48.44124, -123.39322], [48.44076, -123.39117], [48.44067, -123.39095], [48.44062, -123.39086], [48.44054, -123.39075], [48.43986, -123.38997], [48.4396, -123.3896], [48.43943, -123.3893], [48.43941, -123.38917], [48.43935, -123.38895], [48.43932, -123.38888], [48.43921, -123.38876], [48.43902, -123.38865], [48.43901, -123.3885], [48.439, -123.38844], [48.4387, -123.38805], [48.43841, -123.38781], [48.43825, -123.38758], [48.43823, -123.38754], [48.43822, -123.38753], [48.4382, -123.3875], [48.4381, -123.38742], [48.43807, -123.38741], [48.4379, -123.38733], [48.43782, -123.3871], [48.43775, -123.38656], [48.43774, -123.38624], [48.43768, -123.38611], [48.43767, -123.38594], [48.43773, -123.3856], [48.43779, -123.38542], [48.43779, -123.38541], [48.43791, -123.3852], [48.43837, -123.38458], [48.4384, -123.38453], [48.43843, -123.3842], [48.4384, -123.38408], [48.43839, -123.38406], [48.43829, -123.38393], [48.43812, -123.38379], [48.43797, -123.3837], [48.43794, -123.38366], [48.43784, -123.38356], [48.43783, -123.38354], [48.4377, -123.38301], [48.43739, -123.3827], [48.4373, -123.38259], [48.43727, -123.38253], [48.43726, -123.38252], [48.43713, -123.3822], [48.43704, -123.3819], [48.43703, -123.38179], [48.43701, -123.38172], [48.43698, -123.38166], [48.43687, -123.38156], [48.43683, -123.3815], [48.43681, -123.38137], [48.43681, -123.3813], [48.43679, -123.38124], [48.43679, -123.38122], [48.43659, -123.38091], [48.43655, -123.38086], [48.43652, -123.38076], [48.43649, -123.38069], [48.43634, -123.38041], [48.43616, -123.38019], [48.43595, -123.38], [48.43584, -123.37987], [48.43577, -123.37981], [48.4356, -123.37969], [48.43556, -123.37967], [48.43551, -123.37966], [48.43529, -123.37967], [48.43515, -123.37969], [48.43507, -123.37973], [48.43506, -123.37973], [48.43479, -123.37997], [48.43476, -123.37999], [48.43471, -123.37999], [48.43463, -123.38], [48.43462, -123.37999], [48.43457, -123.37999], [48.43457, -123.37998], [48.43448, -123.37995], [48.43447, -123.37995], [48.43441, -123.37993], [48.43437, -123.37991], [48.43413, -123.37968], [48.434, -123.3795], [48.43389, -123.37938], [48.43388, -123.37936], [48.43343, -123.37881], [48.43337, -123.37869], [48.43327, -123.37852], [48.43316, -123.37828], [48.43314, -123.37827], [48.43308, -123.37821], [48.43296, -123.37813], [48.43288, -123.37812], [48.43284, -123.37811], [48.43281, -123.37812], [48.43274, -123.37816], [48.43269, -123.37817], [48.43259, -123.37817], [48.43249, -123.37823], [48.43244, -123.37828], [48.43242, -123.37823], [48.43236, -123.37813], [48.43211, -123.37789], [48.43201, -123.37777], [48.43196, -123.37773], [48.428946, -123.374788], [48.428927, -123.374745], [48.428877, -123.374663], [48.428806, -123.3746], [48.428656, -123.374567], [48.42856, -123.374523], [48.428521, -123.374488], [48.428499, -123.374396], [48.428483, -123.374325], [48.428472, -123.374233], [48.428444, -123.374096], [48.42835, -123.37374], [48.4283, -123.37326], [48.428299, -123.373039], [48.428305, -123.372969], [48.428322, -123.372853], [48.428333, -123.372786], [48.428344, -123.372722], [48.428386, -123.372392], [48.4284, -123.37231], [48.42849, -123.37181], [48.42853, -123.37127], [48.428541, -123.371198], [48.428549, -123.371121], [48.428558, -123.371026], [48.42857, -123.37082], [48.428577, -123.370685], [48.42858, -123.37065], [48.42858, -123.370618], [48.428582, -123.370572], [48.42858, -123.370536], [48.428581, -123.370482], [48.428582, -123.37044], [48.428582, -123.370398], [48.428582, -123.370356], [48.428582, -123.370312], [48.428584, -123.370255], [48.428586, -123.370214], [48.428589, -123.370147], [48.428591, -123.37009], [48.428581, -123.37002], [48.428576, -123.369949], [48.428581, -123.369885], [48.428567, -123.369788], [48.428567, -123.369736], [48.428563, -123.369702], [48.428565, -123.369671], [48.428563, -123.369646], [48.428559, -123.369608], [48.428552, -123.369529], [48.42856, -123.36919], [48.42857, -123.36916], [48.42859, -123.36898], [48.42861, -123.36705], [48.4289, -123.36707], [48.42938, -123.36708], [48.42938, -123.36671]], "stops": [{"name": "QV Cafe & Bakery - Zoomr Zone", "lat": 48.429382, "lon": -123.366778, "emoji": "☕", "tagline": "Start & Zoomr Zone", "desc": "Gear up for the longest of the three loops — about 14 km, almost entirely flat rail-trail and waterfront. Top up your water bottle here.", "tip": "This is the long one — start with full water and a snack."}, {"name": "Johnson St Bridge", "lat": 48.428467, "lon": -123.371805, "emoji": "🌉", "tagline": "Victoria's iconic Blue Bridge", "desc": "The Johnson Street Bridge is a bright-blue bascule (lifting) bridge over the harbour, rebuilt in 2018 with a dedicated cycling deck. Boats pass when the span tilts up.", "tip": "Use the separated bike lane on the north side."}, {"name": "Trackside Art Wall", "lat": 48.434725, "lon": -123.395528, "emoji": "🎨", "tagline": "Open-air street-art gallery", "desc": "Along the old rail corridor, the Trackside Art Wall is a rotating canvas of legal graffiti and murals — one of the city's best free art stops.", "tip": "Great photo backdrop; the murals change often."}, {"name": "Richards Island Viewpoint", "lat": 48.44748, "lon": -123.431311, "emoji": "🪶", "tagline": "Tidal inlet & heron habitat", "desc": "Richards Island viewpoint looks out over the Gorge Waterway, a tidal inlet that was Victoria's first summer playground. Watch for herons, otters and paddlers.", "tip": "Look for the current — the whole inlet is tidal."}, {"name": "Gorgeous Gorge", "lat": 48.450621, "lon": -123.411694, "emoji": "🌀", "tagline": "Reversing tidal falls", "desc": "At Tillicum Narrows the Gorge becomes one of the few reversing tidal falls in the world — the rapids literally flow backwards as the tide turns.", "tip": "Time it with the tide change to catch the falls reversing."}, {"name": "Bamfield Park Dock", "lat": 48.439268, "lon": -123.387828, "emoji": "🛶", "tagline": "Quiet waterfront dock", "desc": "Bamfield Park's little dock is a calm rest stop and a popular kayak launch tucked along the Gorge.", "tip": "Good spot to stretch and refill before the trestle."}, {"name": "Selkirk Trestle", "lat": 48.439095, "lon": -123.382659, "emoji": "🚂", "tagline": "Historic wooden trestle", "desc": "The Selkirk Trestle is one of Canada's longest wooden rail trestles, now a walking-and-cycling bridge you ride right across the water.", "tip": "Stop mid-span for the best view of the Gorge."}], "legs": ["Welcome to Gorge & The Goose — the longest loop at about 14 km, and almost all flat rail-trail. Roll out toward the harbour.", "Approaching the Johnson Street Bridge — this bright-blue lifting bridge replaced a 1924 span that locals also called 'Big Blue'.", "You're now on the Galloping Goose, a rail-trail built on a 1920s railway that once ran all the way to Sooke. The art wall is just ahead.", "Riding along the Gorge Waterway — a century ago this tidal inlet was lined with swimming spots, boathouses and tea gardens.", "Nearing Tillicum Narrows and the reversing falls — as the tide shifts, the saltwater rapids actually flow backward.", "Cruising toward Bamfield Park's dock, a quiet pocket of waterfront and a favourite kayak launch.", "Final landmark: the Selkirk Trestle, a huge restored wooden railway bridge you ride straight across before looping back."], "qa": [{"k": ["eat", "food", "coffee", "drink", "hungry"], "a": "This loop is more nature than cafés. QV Cafe at the start/finish is your best bet; there are occasional kiosks near the Selkirk Trestle and Galloping Goose. Pack a snack for the long middle stretch."}, {"k": ["bathroom", "toilet", "washroom", "restroom"], "a": "Public washrooms are at Gorge Park (near the reversing falls) and around the Selkirk Trestle / Galloping Goose trailhead."}, {"k": ["whale", "seal", "wildlife", "animal", "bird", "heron", "otter"], "a": "The Gorge Waterway is full of life — great blue herons, river otters, kingfishers and the occasional seal that swims up the inlet on the tide."}, {"k": ["history", "old", "rail", "train", "trestle", "goose"], "a": "The Galloping Goose is a rail-trail on a 1920s railway line to Sooke; its quirky name came from a noisy gas-powered passenger car. The Selkirk Trestle is a restored wooden railway bridge."}, {"k": ["time", "long", "distance", "how far", "km", "hours"], "a": "This is the longest loop — about 14 km on flat, paved rail-trail. Plan for 1.5 to 2.5 hours with stops; faster riders under 1.5."}, {"k": ["surface", "hill", "flat", "hard", "easy"], "a": "It's almost entirely flat and paved — the Galloping Goose is a former rail line, so grades are gentle. Easiest terrain of the three tours, just the longest."}, {"k": ["weather", "rain", "wind", "cold"], "a": "The Gorge is more sheltered than the open coast, so it's a good pick on windy days. Still bring a light layer — the trestle crossings can be breezy."}, {"k": ["helmet", "speed", "fast", "rules", "legal", "age", "sidewalk", "license"], "a": "Quick Zoomr rules: helmets are mandatory, top speed is 25 km/h, single rider only, and you ride in bike lanes or as far right as practical — no sidewalks. Minimum age 16."}, {"k": ["park", "lock", "dock", "return", "zoomr zone", "hub", "end ride"], "a": "Zoomrs start and end at a Zoomr Zone hub (the pilot hub is at QV Cafe & Bakery). Lock to the rack when you're done — ending a ride outside a Zone adds fees."}], "blurb": "The long, leafy one. Follow the Galloping Goose rail-trail and the tidal Gorge waterway past murals, herons and a historic wooden trestle."}, {"id": "cobble", "emoji": "🏰", "color": "#6A1B9A", "tour": {"name": "Cobble & Castles Tour", "city": "Victoria, BC", "distanceKm": 7.6, "durationText": "~1.5 hrs", "company": "Zoomr"}, "km": 7.6, "dur": "~1.5 hrs", "route": [[48.42938, -123.36665], [48.42938, -123.36678], [48.42938, -123.36708], [48.42904, -123.36707], [48.4289, -123.36707], [48.42876, -123.36706], [48.42861, -123.36705], [48.42855, -123.36704], [48.42829, -123.36709], [48.42778, -123.36717], [48.4275, -123.36723], [48.42736, -123.36725], [48.42674, -123.36743], [48.42662, -123.36746], [48.42622, -123.36756], [48.42598, -123.36761], [48.42569, -123.36768], [48.42531, -123.36777], [48.42503, -123.36783], [48.4249, -123.36786], [48.42422, -123.36803], [48.42355, -123.3682], [48.42291, -123.36836], [48.42282, -123.36836], [48.42278, -123.36836], [48.42267, -123.36838], [48.42254, -123.36842], [48.42203, -123.36854], [48.42174, -123.36861], [48.42117, -123.36875], [48.42101, -123.36878], [48.42087, -123.36882], [48.42067, -123.36888], [48.42058, -123.36904], [48.42053, -123.36911], [48.42051, -123.36912], [48.4205, -123.36913], [48.42045, -123.36915], [48.42031, -123.36919], [48.42025, -123.3692], [48.42003, -123.36926], [48.41992, -123.3693], [48.4199, -123.36931], [48.41986, -123.36934], [48.41978, -123.3694], [48.41975, -123.36945], [48.41969, -123.36897], [48.41968, -123.36887], [48.41904, -123.36886], [48.41858, -123.36884], [48.41828, -123.36883], [48.41718, -123.36887], [48.4172, -123.36821], [48.41723, -123.36775], [48.41725, -123.36748], [48.41726, -123.36735], [48.41727, -123.36725], [48.41728, -123.36713], [48.4173, -123.36687], [48.41738, -123.3658], [48.41734, -123.36553], [48.41733, -123.36548], [48.41731, -123.36539], [48.4173, -123.36534], [48.41727, -123.36528], [48.41725, -123.36525], [48.41721, -123.36521], [48.41709, -123.36515], [48.41699, -123.36513], [48.41694, -123.36513], [48.41683, -123.36512], [48.41676, -123.36512], [48.41644, -123.36512], [48.4164, -123.36512], [48.41618, -123.36513], [48.41609, -123.36513], [48.41604, -123.36511], [48.416, -123.36507], [48.41593, -123.36498], [48.4159, -123.36494], [48.41578, -123.36476], [48.41555, -123.36458], [48.41541, -123.36454], [48.41534, -123.36454], [48.41528, -123.36453], [48.41526, -123.36453], [48.41514, -123.36455], [48.41508, -123.36456], [48.41498, -123.36457], [48.41487, -123.36458], [48.4148, -123.36455], [48.41473, -123.36451], [48.41469, -123.36449], [48.41454, -123.36439], [48.41429, -123.36407], [48.41409, -123.36382], [48.414, -123.36366], [48.414, -123.36354], [48.414, -123.36347], [48.41394, -123.36336], [48.41365, -123.36297], [48.41363, -123.36294], [48.41356, -123.36273], [48.41353, -123.36248], [48.41351, -123.36222], [48.41352, -123.36206], [48.41355, -123.36195], [48.41356, -123.3619], [48.4136, -123.36183], [48.4137, -123.36173], [48.41378, -123.36171], [48.41381, -123.36167], [48.41382, -123.36163], [48.41385, -123.36092], [48.41386, -123.36065], [48.41392, -123.36065], [48.4139, -123.35935], [48.41444, -123.35934], [48.41485, -123.35932], [48.41502, -123.35932], [48.41522, -123.35932], [48.41539, -123.35932], [48.41577, -123.35932], [48.4165, -123.35929], [48.41667, -123.35928], [48.41679, -123.35924], [48.41693, -123.35911], [48.41702, -123.35899], [48.41705, -123.35895], [48.4171, -123.35885], [48.41719, -123.35873], [48.41723, -123.35867], [48.41753, -123.35844], [48.41768, -123.35839], [48.4179, -123.35834], [48.41832, -123.35823], [48.4185, -123.3582], [48.41912, -123.35807], [48.41959, -123.35792], [48.41961, -123.35791], [48.41994, -123.35782], [48.41978, -123.35624], [48.41976, -123.35603], [48.41976, -123.35602], [48.41972, -123.3557], [48.41968, -123.35534], [48.41964, -123.35496], [48.41961, -123.35464], [48.41955, -123.35416], [48.41952, -123.35389], [48.41942, -123.35301], [48.41934, -123.35219], [48.41928, -123.35156], [48.4192, -123.35086], [48.41919, -123.35079], [48.41916, -123.35052], [48.41912, -123.35017], [48.41899, -123.34892], [48.41887, -123.34793], [48.41883, -123.34757], [48.4188, -123.34723], [48.41874, -123.34695], [48.41867, -123.34679], [48.41857, -123.34658], [48.41843, -123.34641], [48.41833, -123.3463], [48.41801, -123.34605], [48.41769, -123.34583], [48.41739, -123.34562], [48.41717, -123.34546], [48.41702, -123.34534], [48.41694, -123.34522], [48.41688, -123.34511], [48.41684, -123.34504], [48.41687, -123.34497], [48.41689, -123.34493], [48.4169, -123.3449], [48.41692, -123.34487], [48.41694, -123.34484], [48.41696, -123.34483], [48.417, -123.34482], [48.41704, -123.34481], [48.41713, -123.34479], [48.41724, -123.34477], [48.4174, -123.34472], [48.41756, -123.34468], [48.41757, -123.34467], [48.41766, -123.34465], [48.41775, -123.34461], [48.41781, -123.34452], [48.41787, -123.34442], [48.41791, -123.34438], [48.41797, -123.34434], [48.41801, -123.34435], [48.41804, -123.34436], [48.41805, -123.34436], [48.41808, -123.34441], [48.41812, -123.34443], [48.41817, -123.34445], [48.41822, -123.34443], [48.41824, -123.34439], [48.41825, -123.34439], [48.41827, -123.34433], [48.4183, -123.34412], [48.41834, -123.34397], [48.41836, -123.34391], [48.41838, -123.34389], [48.41839, -123.34388], [48.41842, -123.34384], [48.41845, -123.34382], [48.41848, -123.34382], [48.41852, -123.34381], [48.41865, -123.34379], [48.41862, -123.3436], [48.41863, -123.3436], [48.41861, -123.34352], [48.41861, -123.34349], [48.4186, -123.34342], [48.41858, -123.34331], [48.4186, -123.3433], [48.41866, -123.34325], [48.41871, -123.34321], [48.41875, -123.34314], [48.4188, -123.34305], [48.41878, -123.34299], [48.41873, -123.34282], [48.41872, -123.34273], [48.41871, -123.34269], [48.41871, -123.34254], [48.41871, -123.34247], [48.41871, -123.34246], [48.41871, -123.34236], [48.41873, -123.34229], [48.41875, -123.34223], [48.41877, -123.34217], [48.41879, -123.34212], [48.41881, -123.34208], [48.41884, -123.34204], [48.41887, -123.34202], [48.4189, -123.342], [48.41897, -123.34194], [48.41902, -123.34192], [48.41906, -123.34191], [48.41909, -123.3419], [48.41921, -123.34192], [48.41944, -123.34198], [48.41945, -123.34198], [48.4197, -123.34205], [48.41992, -123.34211], [48.4199, -123.34218], [48.41987, -123.34238], [48.42054, -123.34246], [48.4209, -123.34242], [48.42108, -123.3424], [48.42134, -123.34237], [48.4217, -123.34234], [48.42204, -123.34231], [48.42216, -123.3424], [48.42219, -123.34248], [48.42227, -123.34272], [48.42235, -123.34296], [48.42238, -123.34305], [48.42242, -123.34307], [48.42247, -123.34309], [48.42263, -123.34317], [48.42264, -123.34317], [48.4228, -123.34326], [48.42281, -123.34326], [48.42284, -123.34327], [48.42297, -123.34333], [48.42301, -123.34335], [48.42302, -123.34335], [48.42308, -123.34338], [48.42317, -123.34348], [48.42325, -123.34366], [48.42331, -123.34381], [48.42334, -123.3439], [48.42342, -123.34413], [48.42342, -123.34414], [48.42345, -123.3442], [48.42348, -123.34428], [48.42351, -123.34437], [48.42359, -123.34461], [48.4237, -123.34475], [48.42371, -123.34476], [48.42384, -123.34494], [48.42376, -123.34515], [48.42362, -123.34553], [48.42355, -123.3457], [48.42348, -123.3459], [48.42337, -123.3463], [48.42336, -123.34634], [48.42325, -123.34692], [48.42309, -123.3484], [48.42303, -123.34878], [48.423, -123.34908], [48.42296, -123.34944], [48.42295, -123.34962], [48.42295, -123.34984], [48.42302, -123.35062], [48.42304, -123.35076], [48.4231, -123.3513], [48.42312, -123.35157], [48.42317, -123.35204], [48.42328, -123.35297], [48.42329, -123.35313], [48.42339, -123.35404], [48.42351, -123.35511], [48.42354, -123.35537], [48.42357, -123.3556], [48.42371, -123.35694], [48.42377, -123.35741], [48.42384, -123.3581], [48.42396, -123.35916], [48.42403, -123.35972], [48.42408, -123.3602], [48.42415, -123.3609], [48.42416, -123.36093], [48.42418, -123.36117], [48.42418, -123.36118], [48.42433, -123.3625], [48.42438, -123.36309], [48.42446, -123.36371], [48.42457, -123.36466], [48.42461, -123.36506], [48.42464, -123.36536], [48.42465, -123.36552], [48.42468, -123.36583], [48.42472, -123.36619], [48.42475, -123.36646], [48.42476, -123.3665], [48.42477, -123.36665], [48.42479, -123.36686], [48.42481, -123.36698], [48.42482, -123.36711], [48.42484, -123.36734], [48.4249, -123.36786], [48.42503, -123.36783], [48.42531, -123.36777], [48.42569, -123.36768], [48.42598, -123.36761], [48.42622, -123.36756], [48.42662, -123.36746], [48.42674, -123.36743], [48.42736, -123.36725], [48.4275, -123.36723], [48.42778, -123.36717], [48.42829, -123.36709], [48.42855, -123.36704], [48.42861, -123.36705], [48.42876, -123.36706], [48.4289, -123.36707], [48.42904, -123.36707], [48.42938, -123.36708], [48.42938, -123.36678], [48.42939, -123.36652]], "stops": [{"name": "QV Cafe & Bakery - Zoomr Zone", "lat": 48.429384, "lon": -123.366647, "emoji": "☕", "tagline": "Start & Zoomr Zone", "desc": "A ~7.6 km roll through Victoria's grandest heritage architecture — château hotels, parliament, and two genuine castles. Easy rolling pace.", "tip": "Some stops (castle, parliament) have paid tours — check hours if you want to go inside."}, {"name": "Fairmont Empress", "lat": 48.421739, "lon": -123.368645, "emoji": "🏰", "tagline": "Grand 1908 château hotel", "desc": "The Fairmont Empress is Victoria's ivy-draped landmark, opened in 1908 and famous for its afternoon tea served to royalty and celebrities alike.", "tip": "Best photo is from the Inner Harbour causeway looking up."}, {"name": "Legislative Assembly", "lat": 48.420389, "lon": -123.369175, "emoji": "🏛️", "tagline": "BC's seat of government", "desc": "The Legislative Assembly (Parliament Buildings) opened in 1898, designed by 25-year-old architect Francis Rattenbury. Over 3,300 lights outline it at night.", "tip": "Free guided tours run inside on weekdays."}, {"name": "Stone Bridge", "lat": 48.415115, "lon": -123.364585, "emoji": "🌉", "tagline": "Beacon Hill's storybook crossing", "desc": "This picturesque stone bridge arches over the ponds of Beacon Hill Park, laid out in the 1880s in English garden style — a favourite with ducks and photographers.", "tip": "Classic photo spot; watch for turtles on the logs in summer."}, {"name": "Government House", "lat": 48.41871, "lon": -123.34254, "emoji": "🌹", "tagline": "Vice-regal residence & gardens", "desc": "Government House is the official residence of BC's Lieutenant Governor. The heritage rose gardens and grounds are open to the public, free of charge.", "tip": "The gardens are free to wander — leave your Zoomr at the rack."}, {"name": "Craigdarroch Castle", "lat": 48.422775, "lon": -123.343262, "emoji": "🏰", "tagline": "A coal baron's bonanza castle", "desc": "Craigdarroch Castle is a 39-room stone mansion built in 1890 by coal magnate Robert Dunsmuir. Its woodwork and stained glass are some of the finest in North America.", "tip": "Worth a tour inside for the stained glass and the tower view."}], "legs": ["Welcome to Cobble & Castles — about 7.6 km through Victoria's most photogenic heritage architecture. Easy rolling start.", "Approaching the Fairmont Empress — opened in 1908 and covered in Boston ivy, it has served afternoon tea to kings, queens and movie stars.", "The Parliament Buildings ahead were designed by a 25-year-old who won an anonymous competition. At night more than 3,300 bulbs light the facade.", "Heading into Beacon Hill Park toward its stone bridge — the ponds and pathways were laid out in the 1880s in classic English-garden style.", "Rolling up to Government House, home to BC's Lieutenant Governor; its rose gardens are open to everyone, free of charge.", "The grand finale: Craigdarroch Castle, a 39-room Victorian 'bonanza castle' built by a coal baron in 1890."], "qa": [{"k": ["eat", "food", "coffee", "drink", "hungry"], "a": "You're near downtown the whole way — endless options around the Inner Harbour and Fort Street. QV Cafe anchors the start/finish, and there are cafés steps from the Empress and Craigdarroch."}, {"k": ["bathroom", "toilet", "washroom", "restroom"], "a": "Washrooms are at the Inner Harbour causeway, inside Beacon Hill Park, and at the visitor facilities by Craigdarroch Castle."}, {"k": ["history", "old", "built", "castle", "empress", "parliament"], "a": "This route is a tour through Victoria's Gilded Age: the Empress (1908) and Parliament (1898) were both designed by architect Francis Rattenbury, and Craigdarroch Castle (1890) was built by coal baron Robert Dunsmuir."}, {"k": ["ticket", "tour", "inside", "cost", "price", "admission"], "a": "Craigdarroch Castle and (sometimes) the Parliament Buildings charge or require booking to go inside. Government House gardens and the park are free. Check current hours before you arrive."}, {"k": ["time", "long", "distance", "how far", "km", "hours"], "a": "About 7.6 km at an easy pace — roughly 1.5 hours with photo stops, or under an hour riding straight through. Add time if you tour the castle."}, {"k": ["weather", "rain", "wind", "cold"], "a": "Mostly sheltered, urban streets and park paths, so it handles wind and light rain well. Victoria is mild year-round — a light layer is usually enough."}, {"k": ["helmet", "speed", "fast", "rules", "legal", "age", "sidewalk", "license"], "a": "Quick Zoomr rules: helmets are mandatory, top speed is 25 km/h, single rider only, and you ride in bike lanes or as far right as practical — no sidewalks. Minimum age 16."}, {"k": ["park", "lock", "dock", "return", "zoomr zone", "hub", "end ride"], "a": "Zoomrs start and end at a Zoomr Zone hub (the pilot hub is at QV Cafe & Bakery). Lock to the rack when you're done — ending a ride outside a Zone adds fees."}], "blurb": "A heritage cruise through Victoria's grandest architecture — the Empress, the Parliament Buildings, and two genuine Victorian castles."}];
+let DATA = TOURS[0];   // current tour (set by loadTour)
+const TILE_URL = s => `https://${'abc'[Math.floor(Math.random()*3)]}.tile.openstreetmap.org/${s.z}/${s.x}/${s.y}.png`;
+
+/* ---------- Web Mercator helpers ---------- */
+const TS=256;
+const lonToWX=(lon,z)=>(lon+180)/360*TS*2**z;
+const latToWY=(lat,z)=>{const s=Math.sin(lat*Math.PI/180);return (0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*TS*2**z;};
+const wxToLon=(x,z)=>x/(TS*2**z)*360-180;
+const wyToLat=(y,z)=>{const n=Math.PI-2*Math.PI*y/(TS*2**z);return 180/Math.PI*Math.atan(Math.sinh(n));};
+
+const wrap=document.getElementById('mapwrap');
+const scene=document.getElementById('scene');
+const tilesEl=document.getElementById('tiles');
+const svg=document.getElementById('overlay');
+const markersEl=document.getElementById('markers');
+
+/* map state */
+let state={z:15,cLat:0,cLon:0};
+let me=null;            // {lat,lon,acc} live position
+let follow=false;      // recenter map on position updates
+let mapHeading=0;       // current map rotation (deg); 0 = north-up
+let riderHeading=null;  // smoothed travel/facing direction (deg from north)
+let rotateOn=false;     // heading-up navigation mode (engaged with follow)
+let lastPos=null;       // previous fix, for computing heading when GPS course is null
+let gpsHeading=null, compassHeading=null, lastSpeed=0, lastRot=0, compassOn=false;
+let movingMode=false, hvx=null, hvy=null, lastCompass=0;
+function setMoving(sp){ if(sp>1.5) movingMode=true; else if(sp<0.7) movingMode=false; }   // hysteresis: avoid GPS/compass flapping
+// vector exponential moving average — averages out noise, no 0/360 wrap jumps
+function pushHeading(deg, alpha){
+  const t=rad(deg), cx=Math.cos(t), cy=Math.sin(t);
+  if(hvx==null){ hvx=cx; hvy=cy; } else { hvx+=(cx-hvx)*alpha; hvy+=(cy-hvy)*alpha; }
+  riderHeading=(Math.atan2(hvy,hvx)*180/Math.PI+360)%360;
+  if(rotateOn) startNav();
+}
+/* smooth navigation: ease the dot/map between GPS fixes + glide rotation (fluid, like Google Maps) */
+let navReq=null, dispLat=null, dispLon=null, lastNavRender=0;
+function startNav(){ if(navReq==null) navReq=requestAnimationFrame(navTick); }
+function navTick(ts){
+  navReq=null; if(!me) return;
+  let first=false;
+  if(dispLat==null){ dispLat=me.lat; dispLon=me.lon; first=true; }
+  const dLat=me.lat-dispLat, dLon=me.lon-dispLon;
+  const moving = Math.abs(dLat)>1.4e-7 || Math.abs(dLon)>1.4e-7;
+  if(moving){ dispLat+=dLat*0.16; dispLon+=dLon*0.16; } else { dispLat=me.lat; dispLon=me.lon; }
+  let turning=false;
+  if(rotateOn && riderHeading!=null && Math.abs(((riderHeading-mapHeading+540)%360)-180)>0.6){ mapHeading=riderHeading; turning=true; }
+  if(follow){ state.cLat=dispLat; state.cLon=dispLon; }
+  if((moving||turning||first) && ts-lastNavRender>28){ lastNavRender=ts; render(); }   // ~30fps while moving/turning
+  if(moving||turning) startNav();
+}
+function onOrient(e){
+  const now=Date.now(); if(now-lastCompass<40) return; lastCompass=now;              // cap compass intake
+  let hd=null;
+  if(typeof e.webkitCompassHeading==='number' && !isNaN(e.webkitCompassHeading)) hd=e.webkitCompassHeading;       // iOS: degrees clockwise from north
+  else if(e.absolute && typeof e.alpha==='number' && !isNaN(e.alpha)) hd=(360-e.alpha)%360;                       // Android absolute
+  if(hd==null) return;
+  const sa=(screen.orientation && typeof screen.orientation.angle==='number') ? screen.orientation.angle : 0;     // correct for landscape mount
+  compassHeading=((hd+sa)%360+360)%360;
+  if(!movingMode) pushHeading(compassHeading, 0.05);                                  // heavy smoothing when slow/stopped
+}
+function enableCompass(){
+  if(compassOn) return; compassOn=true;
+  const add=()=>{ window.addEventListener('deviceorientationabsolute',onOrient,true); window.addEventListener('deviceorientation',onOrient,true); };
+  try{
+    if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function')
+      DeviceOrientationEvent.requestPermission().then(s=>{ if(s==='granted') add(); }).catch(()=>{});
+    else add();
+  }catch(e){}
+}
+const tileCache={};    // key "z/x/y" -> reused <img>, prevents reload flicker
+let meDot=null;        // persistent "you are here" element
+/* ---------- geo helpers (metres) ---------- */
+const Rm=6371000, rad=d=>d*Math.PI/180;
+function haversine(aLat,aLon,bLat,bLon){
+  const dLa=rad(bLat-aLat),dLo=rad(bLon-aLon);
+  const x=Math.sin(dLa/2)**2+Math.cos(rad(aLat))*Math.cos(rad(bLat))*Math.sin(dLo/2)**2;
+  return 2*Rm*Math.asin(Math.sqrt(x));
+}
+const mPerPx=(lat,z)=>156543.03392*Math.cos(rad(lat))/2**z;
+// distance (m) from point to the route polyline, via local equirectangular plane
+function distToRoute(lat,lon){
+  const k=Math.cos(rad(lat))*111320, ky=110540;
+  const px=lon*k, py=lat*ky; let best=Infinity;
+  for(let i=1;i<DATA.route.length;i++){
+    const [la1,lo1]=DATA.route[i-1],[la2,lo2]=DATA.route[i];
+    const ax=lo1*k,ay=la1*ky,bx=lo2*k,by=la2*ky;
+    const dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy||1e-9;
+    let t=((px-ax)*dx+(py-ay)*dy)/L2; t=Math.max(0,Math.min(1,t));
+    const cx=ax+t*dx,cy=ay+t*dy, d=Math.hypot(px-cx,py-cy);
+    if(d<best)best=d;
+  }
+  return best;
+}
+function computeBounds(){let a={mnLat:90,mxLat:-90,mnLon:180,mxLon:-180};
+  DATA.route.forEach(([la,lo])=>{a.mnLat=Math.min(a.mnLat,la);a.mxLat=Math.max(a.mxLat,la);a.mnLon=Math.min(a.mnLon,lo);a.mxLon=Math.max(a.mxLon,lo);});return a;}
+let bounds=computeBounds();
+
+function fitWhole(){
+  const W=wrap.clientWidth,H=wrap.clientHeight;
+  let z=18;
+  for(;z>10;z--){
+    const w=lonToWX(bounds.mxLon,z)-lonToWX(bounds.mnLon,z);
+    const h=latToWY(bounds.mnLat,z)-latToWY(bounds.mxLat,z);
+    if(w<=W*0.92 && h<=H*0.84) break;
+  }
+  state.z=z; state.cLat=(bounds.mnLat+bounds.mxLat)/2; state.cLon=(bounds.mnLon+bounds.mxLon)/2;
+  render();
+}
+
+function sceneTransform(scale){ scene.style.transform = `rotate(${-mapHeading}deg)` + ((scale&&scale!==1)?` scale(${scale})`:''); }
+function render(){
+  const W=wrap.clientWidth,H=wrap.clientHeight,z=state.z;
+  const D=Math.ceil(Math.hypot(W,H))+2*TS;            // oversized square so rotation never shows empty corners
+  scene.style.left=((W-D)/2)+'px'; scene.style.top=((H-D)/2)+'px';
+  scene.style.width=D+'px'; scene.style.height=D+'px'; scene.style.transformOrigin='50% 50%';
+  sceneTransform(1);
+  const cWX=lonToWX(state.cLon,z),cWY=latToWY(state.cLat,z);
+  const originX=cWX-D/2, originY=cWY-D/2;             // world px at scene top-left
+  const n=2**z;
+  const x0=Math.floor(originX/TS)-1, x1=Math.floor((originX+D)/TS)+1;
+  const y0=Math.floor(originY/TS)-1, y1=Math.floor((originY+D)/TS)+1;
+  const need=new Set();
+  for(let x=x0;x<=x1;x++) for(let y=y0;y<=y1;y++){
+    if(y<0||y>=n) continue;
+    const tx=((x%n)+n)%n;
+    const key=z+'/'+tx+'/'+y;
+    need.add(key);
+    const left=x*TS-originX, top=y*TS-originY;
+    let img=tileCache[key];
+    if(!img){
+      img=document.createElement('img');
+      img.onload=function(){this.style.opacity=1;};
+      img.onerror=function(){this.style.visibility='hidden';};
+      img.src=TILE_URL({z,x:tx,y});
+      tileCache[key]=img; tilesEl.appendChild(img);
+    }
+    img.style.left=left+'px'; img.style.top=top+'px';
+  }
+  for(const key in tileCache){ if(!need.has(key)){ tileCache[key].remove(); delete tileCache[key]; } }
+  const pts=DATA.route.map(([la,lo])=>`${(lonToWX(lo,z)-originX).toFixed(1)},${(latToWY(la,z)-originY).toFixed(1)}`).join(' ');
+  svg.setAttribute('width',D); svg.setAttribute('height',D);
+  const dlat=(dispLat!=null?dispLat:(me?me.lat:0)), dlon=(dispLon!=null?dispLon:(me?me.lon:0));
+  let acc='';
+  if(me){
+    const mx=lonToWX(dlon,z)-originX, my=latToWY(dlat,z)-originY;
+    const r=Math.min(120,(me.acc||20)/mPerPx(dlat,z));
+    acc=`<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="${r.toFixed(1)}" fill="rgba(30,144,255,.15)" stroke="rgba(30,144,255,.5)" stroke-width="1"/>`;
+  }
+  svg.innerHTML=`<polyline points="${pts}" fill="none" stroke="#fff" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" opacity="0.6"/>
+                 <polyline points="${pts}" fill="none" stroke="#0E9AA7" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>${acc}`;
+  // markers (counter-rotate so numbers stay upright)
+  markersEl.innerHTML='';
+  order.forEach((origIdx,pos)=>{
+    const s=DATA.stops[origIdx];
+    const px=lonToWX(s.lon,z)-originX, py=latToWY(s.lat,z)-originY;
+    const d=document.createElement('div');
+    d.className='stop-marker'+(pos<cur?' done':'')+(pos===cur?' active':'');
+    d.style.left=px+'px'; d.style.top=py+'px';
+    d.style.transform=`translate(-50%,-50%) rotate(${mapHeading}deg)`+(pos===cur?' scale(1.22)':'');
+    d.textContent=pos+1; d.onclick=()=>goTo(pos);
+    markersEl.appendChild(d);
+  });
+  if(me){
+    if(!meDot){ meDot=document.createElement('div'); meDot.className='me-dot'; scene.appendChild(meDot); }
+    const mx=lonToWX(dlon,z)-originX, my=latToWY(dlat,z)-originY;
+    const hdg = rotateOn ? mapHeading : (riderHeading==null?0:riderHeading);  // arrow points to travel direction on screen
+    meDot.style.left=mx+'px'; meDot.style.top=my+'px';
+    meDot.style.transform=`translate(-50%,-50%) rotate(${hdg}deg)`;
+    meDot.classList.toggle('hasdir', riderHeading!=null);
+    meDot.style.display='block';
+  } else if(meDot){ meDot.style.display='none'; }
+}
+function panToLatLon(lat,lon){state.cLat=lat;state.cLon=lon;render();}
+
+/* pan (1 finger) + two-finger pinch-zoom AND rotate — all rotation-aware */
+let drag=null, g2=null;
+const pointers=new Map();
+const ROT=(x,y,deg)=>{const t=rad(deg),c=Math.cos(t),s=Math.sin(t);return [c*x - s*y, s*x + c*y];}; // y-down rotation by +deg
+function screenToWorld(clientX,clientY){
+  const r=wrap.getBoundingClientRect(), W=wrap.clientWidth, H=wrap.clientHeight;
+  const [wx,wy]=ROT(clientX-r.left-W/2, clientY-r.top-H/2, mapHeading);  // world offset = R(h)*screenOffset
+  return [lonToWX(state.cLon,state.z)+wx, latToWY(state.cLat,state.z)+wy];
+}
+function zoomAround(clientX,clientY,newZ){
+  newZ=Math.max(11,Math.min(19,newZ)); if(newZ===state.z) return;
+  const [wx,wy]=screenToWorld(clientX,clientY);
+  const lon=wxToLon(wx,state.z), lat=wyToLat(wy,state.z);
+  const r=wrap.getBoundingClientRect(), W=wrap.clientWidth, H=wrap.clientHeight;
+  const [ox,oy]=ROT(clientX-r.left-W/2, clientY-r.top-H/2, mapHeading);
+  state.z=newZ; follow=false;
+  state.cLon=wxToLon(lonToWX(lon,newZ)-ox,newZ); state.cLat=wyToLat(latToWY(lat,newZ)-oy,newZ);
+  render();
+}
+wrap.addEventListener('pointerdown',e=>{
+  if(e.target.closest('button')) return;
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  rotateOn=false; follow=false;                                  // manual control; keep current rotation
+  if(pointers.size>=2){
+    drag=null; const p=[...pointers.values()];
+    g2={ z0:state.z, scale:1, A:screenToWorld(p[0].x,p[0].y), B:screenToWorld(p[1].x,p[1].y) };
+    scene.style.transition='none';
+  } else {
+    drag={x:e.clientX,y:e.clientY,cWX:lonToWX(state.cLon,state.z),cWY:latToWY(state.cLat,state.z)};
+    try{wrap.setPointerCapture(e.pointerId);}catch(_){}
+  }
+});
+wrap.addEventListener('pointermove',e=>{
+  if(pointers.has(e.pointerId)) pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(g2 && pointers.size>=2){
+    const p=[...pointers.values()], r=wrap.getBoundingClientRect(), W=wrap.clientWidth, H=wrap.clientHeight;
+    const a1=[p[0].x-r.left-W/2, p[0].y-r.top-H/2], b1=[p[1].x-r.left-W/2, p[1].y-r.top-H/2];
+    const dW=[g2.B[0]-g2.A[0], g2.B[1]-g2.A[1]], dS=[b1[0]-a1[0], b1[1]-a1[1]];
+    const s=(Math.hypot(dS[0],dS[1])||1)/(Math.hypot(dW[0],dW[1])||1);
+    const hp=(Math.atan2(dW[1],dW[0])-Math.atan2(dS[1],dS[0]))*180/Math.PI;   // solve heading from finger spread
+    mapHeading=((hp%360)+360)%360;
+    const [rx,ry]=ROT(a1[0]/s, a1[1]/s, mapHeading);             // center so finger 0's geo stays under it
+    state.cLon=wxToLon(g2.A[0]-rx,state.z); state.cLat=wyToLat(g2.A[1]-ry,state.z);
+    render(); scene.style.transform=`rotate(${-mapHeading}deg) scale(${s})`; g2.scale=s;
+    return;
+  }
+  if(!drag) return;
+  const [wdx,wdy]=ROT(e.clientX-drag.x, e.clientY-drag.y, mapHeading);
+  state.cLon=wxToLon(drag.cWX-wdx,state.z); state.cLat=wyToLat(drag.cWY-wdy,state.z); render();
+});
+function endPointer(e){
+  pointers.delete(e.pointerId);
+  if(g2 && pointers.size<2){
+    const nz=Math.max(11,Math.min(19,Math.round(g2.z0+Math.log2(g2.scale||1))));
+    g2=null; scene.style.transition=''; state.z=nz; render();
+  }
+  if(pointers.size===0) drag=null;
+}
+wrap.addEventListener('pointerup',endPointer);
+wrap.addEventListener('pointercancel',endPointer);
+/* wheel zoom (desktop) — anchored at cursor */
+wrap.addEventListener('wheel',e=>{e.preventDefault();zoomAround(e.clientX,e.clientY,state.z+(e.deltaY<0?1:-1));},{passive:false});
+function setZoom(z){state.z=Math.max(11,Math.min(19,z));render();}
+document.getElementById('zin').onclick=()=>setZoom(state.z+1);
+document.getElementById('zout').onclick=()=>setZoom(state.z-1);
+// "Whole route" — north-up overview of the entire loop
+document.getElementById('wholeBtn').onclick=()=>{ follow=false; rotateOn=false; mapHeading=0; fitWhole(); };
+
+/* drag handles to resize panel vs map — grab (portrait, vertical) / vgrab (landscape, horizontal) */
+const appEl=document.getElementById('app');
+const sheetEl=document.querySelector('.sheet'), grabEl=sheetEl.querySelector('.grab'), vgrabEl=document.getElementById('vgrab');
+let sheetDrag=null, vDrag=null;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function landscapeMode(){ return window.matchMedia('(orientation: landscape) and (max-height: 600px)').matches; }
+grabEl.addEventListener('pointerdown',e=>{
+  if(landscapeMode()) return;
+  sheetDrag={y:e.clientY, h:sheetEl.getBoundingClientRect().height};
+  try{grabEl.setPointerCapture(e.pointerId);}catch(_){}
+  e.preventDefault();
+});
+vgrabEl.addEventListener('pointerdown',e=>{
+  if(!landscapeMode()) return;
+  vDrag={x:e.clientX, w:sheetEl.getBoundingClientRect().width};
+  try{vgrabEl.setPointerCapture(e.pointerId);}catch(_){}
+  e.preventDefault();
+});
+window.addEventListener('pointermove',e=>{
+  if(sheetDrag){
+    const h=clamp(sheetDrag.h+(sheetDrag.y-e.clientY), 150, appEl.clientHeight*0.75);
+    sheetEl.style.height=h+'px'; render();
+  } else if(vDrag){
+    const w=clamp(vDrag.w+(vDrag.x-e.clientX), 240, appEl.clientWidth*0.6);
+    appEl.style.gridTemplateColumns='1fr '+w+'px'; render();
+  }
+});
+window.addEventListener('pointerup',()=>{ sheetDrag=null; vDrag=null; });
+
+/* ---------- Live position engine ---------- */
+const ARRIVE=60, OFFROUTE=45;
+let reached=new Set(), nextStop=0, voiceOn=true, watchId=null;
+let touring=false, headingToStart=false, skipping=false, previewing=false, returningToHub=false;
+let phase='enroute';             // 'atstop' (arrived, narration done) | 'enroute' (heading to nextStop)
+let hubIdx=0, reviiSeen=false;   // Zoomr Zone stop index / one-time Revii intro shown
+const statusEl=document.getElementById('status');
+const fmt=m=> m<1000 ? Math.round(m/5)*5+' m' : (m/1000).toFixed(1)+' km';
+let statusTimer=null;
+function setStatus(t,warn,autohide){clearTimeout(statusTimer);statusEl.style.display='block';statusEl.textContent=t;statusEl.classList.toggle('warn',!!warn);if(autohide)statusTimer=setTimeout(()=>{statusEl.style.display='none';},5000);}
+function speak(t){ if(!voiceOn||!('speechSynthesis'in window))return; try{const u=new SpeechSynthesisUtterance(t);u.rate=1;u.pitch=1;speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){} }
+function resetProgress(){reached=new Set();nextStop=0;cur=0;skipping=false;renderPanel();}
+const COMPASS8=['north','north-east','east','south-east','south','south-west','west','north-west'];
+function cardinal(b){ return COMPASS8[Math.round((((b%360)+360)%360)/45)%8]; }
+function routeIdxAhead(ri,meters){ let a=0,k=ri,n=DATA.route.length; while(k<n-1){ a+=haversine(DATA.route[k][0],DATA.route[k][1],DATA.route[k+1][0],DATA.route[k+1][1]); if(a>=meters) return k+1; k++; } return n-1; }
+function pathHeading(lat,lon){ const ri=nearestRouteIdx(lat,lon), fi=routeIdxAhead(ri,25); if(fi<=ri) return null; return bearing(DATA.route[ri],DATA.route[fi]); }
+function streetAtRouteIdx(ri){ let s=null; for(const m of maneuvers){ if(m.i<=ri && m.street) s=m.street; } return s; }   // street you're currently on
+function directionToNext(fromStop){
+  if(nextStop>=order.length) return null;
+  const to=stopAt(nextStop), base=me||fromStop;
+  let b=pathHeading(base.lat,base.lon);                                   // direction ALONG the tour path, not crow-flies
+  if(b==null) b=bearing([fromStop.lat,fromStop.lon],[to.lat,to.lon]);
+  return { name:to.name, dir:cardinal(b), street:streetAtRouteIdx(nearestRouteIdx(base.lat,base.lon)) };
+}
+function cueText(d, lead){ return `${lead} head ${d.dir}${d.street?' on '+d.street:''} toward ${d.name}.`; }
+function showNextCue(){
+  const el=document.getElementById('nextCue'); if(!el) return;
+  const d=directionToNext(stopAt(cur));
+  el.textContent = d ? '✅ '+cueText(d,'When you’re ready,')
+                     : '🎉 You’ve reached the last stop — tap Finish when you’re done.';
+  el.style.display='block';
+}
+// reached a stop via GPS: focus it, read its narration, then cue the next leg
+function arrive(p){
+  reached.add(p); cur=p; skipping=false; phase='atstop';
+  renderPanel();
+  while(reached.has(nextStop)) nextStop++;
+  showNextCue();
+  speakArrival(p);
+}
+async function speakArrival(p){
+  const oi=order[p], key=DATA.id+'|'+oi, s=stopAt(p);
+  let text=narrationCache[key]||s.desc;
+  if(aiMode()!=='off' && !narrationCache[key]){
+    try{ text=await claudeRequest(narrationSystem(),[{role:'user',content:narrationUser(p)}],240); narrationCache[key]=text; if(cur===p) $('desc').textContent=text; }catch(e){}
+  }
+  if(voiceOn){
+    const d=directionToNext(s);
+    const cue = d ? ' '+cueText(d,'When you’re ready,') : ' You’ve reached the last stop.';
+    speak(text + ' …' + cue);
+  }
+}
+// rider leaves a stop (or taps Next): switch focus to the next target — but DON'T narrate until they arrive there
+function goEnroute(){
+  if(nextStop>=order.length) return;
+  phase='enroute'; cur=nextStop; renderPanel();
+}
+function skipStop(){
+  if(!touring || nextStop>=order.length) return;
+  reached.add(nextStop); nextStop++; skipping=true; phase='enroute';   // skip -> head to the one after, narrate on arrival
+  if(nextStop<order.length){ cur=nextStop; renderPanel(); }
+  else { setStatus('Loop complete 🎉'); }
+}
+/* ---------- turn-by-turn (geometric, from the drawn path + free OSM street names) ---------- */
+let maneuvers=[];
+function bearing(a,b){const φ1=rad(a[0]),φ2=rad(b[0]),Δλ=rad(b[1]-a[1]);
+  const y=Math.sin(Δλ)*Math.cos(φ2), x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;}
+function computeManeuversFor(R){
+  const seg=i=>haversine(R[i][0],R[i][1],R[i+1][0],R[i+1][1]);
+  const rdist=(i,j)=>{let d=0;for(let k=i;k<j;k++)d+=seg(k);return d;};
+  const ib=(i,m)=>{let a=0,k=i;while(k>0){a+=seg(k-1);if(a>=m)return k-1;k--;}return 0;};
+  const iff=(i,m)=>{let a=0,k=i,n=R.length;while(k<n-1){a+=seg(k);if(a>=m)return k+1;k++;}return n-1;};
+  const out=[]; let last=-1;
+  for(let i=3;i<R.length-3;i++){
+    const ang=((bearing(R[i],R[iff(i,16)])-bearing(R[ib(i,16)],R[i])+540)%360)-180;
+    if(Math.abs(ang)>=32){
+      if(last>=0 && rdist(last,i)<35){                           // merge close maneuvers, keep the sharper
+        if(Math.abs(ang)>Math.abs(out[out.length-1].angle)) out[out.length-1]={i,lat:R[i][0],lon:R[i][1],angle:ang,street:null,fetching:false,passed:false,said:false};
+        last=i; continue;
+      }
+      out.push({i,lat:R[i][0],lon:R[i][1],angle:ang,street:null,fetching:false,passed:false,said:false}); last=i;
+    }
+  }
+  return out;
+}
+function computeManeuvers(){ return computeManeuversFor(DATA.route); }
+function applyTurnOverrides(tour, mans){
+  const tt=tour.turns; if(!tt) return mans;
+  if(tt.edits){ for(let q=mans.length-1;q>=0;q--){ const e=tt.edits[mans[q].i]; if(e){ if(e.off){ mans.splice(q,1); continue; } if(e.street!=null) mans[q].street=e.street; if(e.text!=null) mans[q].text=e.text; if(e.ni!=null) mans[q].i=e.ni; } } }
+  if(Array.isArray(tt.added)) tt.added.forEach(a=>mans.push({i:a.i|0,lat:a.lat,lon:a.lon,angle:a.angle||0,street:a.street||null,text:a.text||null,fetching:(a.street!=null),passed:false,said:false,manual:true}));
+  mans.sort((x,y)=>x.i-y.i);
+  return mans;
+}
+function buildManeuvers(tour){ return applyTurnOverrides(tour, computeManeuversFor(tour.route)); }
+function resetManeuvers(){ maneuvers.forEach(m=>{m.passed=false;m.said=false;}); }
+function maneuverText(m){
+  if(m.text) return m.text;                                  // admin override instruction
+  const dir=m.angle<0?'left':'right', mag=Math.abs(m.angle);
+  const t = mag<50?('Bear '+dir) : mag<120?('Turn '+dir) : ('Sharp '+dir);
+  return t + (m.street ? ' onto '+m.street : '');
+}
+function nearestRouteIdx(lat,lon){let best=1e9,bi=0;const R=DATA.route;for(let i=0;i<R.length;i++){const d=haversine(lat,lon,R[i][0],R[i][1]);if(d<best){best=d;bi=i;}}return bi;}
+function upcomingTurn(lat,lon){
+  if(!maneuvers.length) return null;
+  const ri=nearestRouteIdx(lat,lon);
+  for(const m of maneuvers){
+    if(m.passed) continue;
+    if(ri>m.i+2){ m.passed=true; continue; }                    // we've driven past it
+    return {m, dist:haversine(lat,lon,m.lat,m.lon)};
+  }
+  return null;
+}
+async function fetchStreet(m, tourId){
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${m.lat}&lon=${m.lon}&zoom=17&addressdetails=1`,{headers:{'Accept':'application/json'}});
+    const j=await r.json(); const a=j.address||{};
+    m.street=a.road||a.pedestrian||a.footway||a.path||a.cycleway||'';   // '' = looked up, none found
+  }catch(e){ m.street=''; }
+  saveStreet(m, tourId);
+}
+function maybeFetchStreet(m){ if(m.street===null && !m.fetching){ m.fetching=true; fetchStreet(m, DATA.id); } }
+/* persist street names per tour so they're not looked up live while riding */
+function streetKey(id){ return 'zoomrStreets:'+(id||DATA.id); }
+function loadStreetCacheInto(list,id){ try{ const c=JSON.parse(localStorage.getItem(streetKey(id))||'{}'); list.forEach(m=>{ if(c[m.i]!=null) m.street=c[m.i]; }); }catch(e){} }
+function loadStreetCache(){ loadStreetCacheInto(maneuvers, DATA.id); }
+function saveStreet(m, id){ try{ const k=streetKey(id), c=JSON.parse(localStorage.getItem(k)||'{}'); c[m.i]=m.street; localStorage.setItem(k,JSON.stringify(c)); }catch(e){} }
+function prefetchStreets(){}   // legacy no-op; global prefetcher handles it now
+
+/* ---------- background prefetch of ALL tours (street names, then map tiles) on app open ---------- */
+let prefetchRunning=false;
+function deg2tile(lat,lon,z){const n=2**z;return [Math.floor((lon+180)/360*n), Math.floor((1-Math.asinh(Math.tan(lat*Math.PI/180))/Math.PI)/2*n)];}
+function startPrefetch(){
+  if(prefetchRunning) return; prefetchRunning=true;
+  // 1) street names — current tour first, then others; each in route order (beginning of the tour first)
+  function streetStep(){
+    let cur=TOURS.find(t=>t===DATA && (t._man||[]).some(m=>m.street===null));
+    let t = cur || TOURS.find(t=>(t._man||[]).some(m=>m.street===null));
+    if(!t){ tilePrewarm(); return; }                       // streets done -> warm tiles
+    const m=t._man.find(m=>m.street===null);
+    m.fetching=true;
+    fetchStreet(m, t.id).finally(()=>setTimeout(streetStep, 1100));   // ~1 req/sec (OSM fair-use)
+  }
+  streetStep();
+}
+function tilePrewarm(){                                     // gently warm the browser cache for each route corridor
+  const z=16, jobs=[];
+  TOURS.forEach(t=>{ const seen=new Set();
+    t.route.forEach(([la,lo])=>{ const [x,y]=deg2tile(la,lo,z); const k=x+'/'+y; if(!seen.has(k)){seen.add(k); jobs.push({z,x,y});} });
+  });
+  let i=0;
+  (function next(){ if(i>=jobs.length||i>=600) return; const j=jobs[i++]; const im=new Image(); im.src=TILE_URL(j); setTimeout(next,150); })();
+}
+
+function updatePosition(lat,lon,acc){
+  me={lat,lon,acc:acc||15};
+  startNav();                                  // smooth easing handles centering + rendering the dot
+  if(previewing) return;                       // preview is manual step-through; just show the live dot
+  if(returningToHub){                          // tour over, guiding back to the Zoomr Zone
+    const hub=DATA.stops[hubIdx], d=haversine(lat,lon,hub.lat,hub.lon);
+    if(d < (hub._r||ARRIVE)){ returningToHub=false; setStatus('🛴 Back at the Zoomr Zone — end your rental in the Revii app'); return; }
+    setStatus('🔚 Back to '+hub.name+' · '+fmt(d)); return;
+  }
+  const s0=stopAt(0), d0=haversine(lat,lon,s0.lat,s0.lon);
+  // before the tour begins: guide the rider to the starting point
+  if(!touring){
+    if(headingToStart){
+      if(d0 < (s0._r||ARRIVE)){ beginTour(); return; }
+      setStatus('🚶 Head to start: '+s0.name+' · '+fmt(d0)); return;
+    }
+    setStatus(d0 < (s0._r||ARRIVE) ? 'You’re at the start — tap Start tour' : 'Tap Start tour to begin'); return;
+  }
+  // touring: ordered proximity (arrivals fire even when off-route, so the tour resumes on its own)
+  if(nextStop<order.length){
+    const ns=stopAt(nextStop);
+    if(haversine(lat,lon,ns.lat,ns.lon) < (ns._r||ARRIVE)){ arrive(nextStop); }
+  }
+  // once they ride away from the stop, switch focus to the next leg (still no narration until arrival)
+  if(phase==='atstop' && nextStop<order.length && haversine(lat,lon,stopAt(cur).lat,stopAt(cur).lon) > 40){ goEnroute(); }
+  if(nextStop>=order.length){ setStatus('Loop complete 🎉'); return; }
+  const ns=stopAt(nextStop), off=distToRoute(lat,lon);
+  if(off>OFFROUTE){
+    setStatus(skipping ? 'Find your own way — tour resumes near '+ns.name
+                       : '↩ Off route — head back to the path', !skipping);
+    return;
+  }
+  // turn-by-turn: show the next maneuver when it's close; otherwise the next stop
+  const turn=upcomingTurn(lat,lon);
+  if(turn && turn.dist<170){
+    maybeFetchStreet(turn.m);
+    if(voiceOn && !turn.m.said && turn.dist<85){ speak(maneuverText(turn.m)); turn.m.said=true; }
+    setStatus((turn.m.angle<0?'↰ ':'↱ ')+maneuverText(turn.m)+' · '+fmt(turn.dist));
+    return;
+  }
+  setStatus(`→ ${ns.name} · ${fmt(haversine(lat,lon,ns.lat,ns.lon))}`);
+}
+/* ----- start-tour flow ----- */
+function setStartCta(show,mode){
+  const cta=document.getElementById('startCta'), nav=document.querySelector('.nav'), arow=document.getElementById('actionRow');
+  if(!show){
+    cta.style.display='none'; nav.style.display='flex'; arow.style.display='block';
+    document.getElementById('skipBtn').style.display = previewing ? 'none' : 'block';
+    document.getElementById('previewEndBtn').style.display = previewing ? 'block' : 'none';
+    return;
+  }
+  cta.style.display='block'; nav.style.display='none'; arow.style.display='none';
+  const btn=document.getElementById('startBtn'), hint=document.getElementById('startHint'),
+        pv=document.getElementById('previewBtn'), s0=stopAt(0).name;
+  if(mode==='heading'){ btn.textContent='Start here anyway'; pv.style.display='none'; hint.textContent='🚶 Head to '+s0+' — starts automatically on arrival.'; }
+  else { btn.textContent='▶ Start tour'; pv.style.display='block'; hint.textContent='Preview the stops, or start and we’ll begin when you reach '+s0+'.'; }
+}
+function beginTour(){
+  touring=true; headingToStart=false; previewing=false; returningToHub=false; setStartCta(false);
+  reached=new Set(); nextStop=0; skipping=false;
+  follow=true; rotateOn=true; state.z=Math.max(state.z,16);   // follow + heading-up while touring
+  if(riderHeading!=null) mapHeading=riderHeading;
+  resetManeuvers();
+  if(me){ arrive(0); } else { cur=0; renderPanel(); }
+  if(!reviiSeen){ reviiSeen=true; document.getElementById('reviiModal').classList.add('open'); }   // one-time intro
+}
+/* ----- end-of-tour flow ----- */
+function openEndModal(){ document.getElementById('endModal').classList.add('open'); }
+function closeEnd(){ document.getElementById('endModal').classList.remove('open'); }
+function returnToHub(){
+  closeEnd(); returningToHub=true; follow=true; rotateOn=true; state.z=Math.max(state.z,16);
+  if(riderHeading!=null) mapHeading=riderHeading;
+  document.getElementById('skipBtn').style.display='none';
+  document.getElementById('endNowBtn').style.display='block';
+  const hub=DATA.stops[hubIdx];
+  setStatus(me ? '🔚 Back to '+hub.name+' · '+fmt(haversine(me.lat,me.lon,hub.lat,hub.lon)) : '🔚 Head back to '+hub.name);
+}
+document.getElementById('endReturnBtn').onclick=returnToHub;
+document.getElementById('endTourBtn').onclick=()=>{ closeEnd(); showPicker(); };
+document.getElementById('endNowBtn').onclick=showPicker;
+document.getElementById('endX').onclick=closeEnd;
+document.getElementById('endModal').onclick=e=>{ if(e.target.id==='endModal') closeEnd(); };
+document.getElementById('reviiOk').onclick=()=>document.getElementById('reviiModal').classList.remove('open');
+document.getElementById('reviiX').onclick=()=>document.getElementById('reviiModal').classList.remove('open');
+document.getElementById('reviiModal').onclick=e=>{ if(e.target.id==='reviiModal') e.currentTarget.classList.remove('open'); };
+/* preview = manual step-through of the stops (no live tracking, instant jumps) */
+function enterPreview(){
+  previewing=true; touring=false; headingToStart=false; follow=false;
+  reached=new Set(); nextStop=0; cur=0; skipping=false;
+  setStartCta(false);
+  renderPanel(); refreshNarration();
+  const s=stopAt(0); state.z=Math.max(state.z,16); panToLatLon(s.lat,s.lon);
+}
+function exitPreview(){                          // back to the main tour menu
+  previewing=false; follow=false;
+  reached=new Set(); nextStop=0; cur=0;
+  document.getElementById('status').style.display='none';
+  renderPanel(); setStartCta(true,'ready'); fitWhole();
+}
+function startTour(){
+  if(touring) return;
+  const ok=startGPS();                                 // ensure GPS is on / prompt permission
+  if(!ok){ beginTour(); return; }                      // no GPS available (e.g. local file) -> just start
+  const s0=stopAt(0);
+  if(me && haversine(me.lat,me.lon,s0.lat,s0.lon) < (s0._r||ARRIVE)){ beginTour(); return; }
+  headingToStart=true; follow=true; rotateOn=true; state.z=Math.max(state.z,16); setStartCta(true,'heading');
+  setStatus(me ? '🚶 Head to start: '+s0.name+' · '+fmt(haversine(me.lat,me.lon,s0.lat,s0.lon)) : 'Locating you…');
+}
+document.getElementById('startBtn').onclick=()=>{ headingToStart ? beginTour() : startTour(); };
+document.getElementById('skipBtn').onclick=skipStop;
+
+/* ----- manage route (choose start + remove stops) ----- */
+let mStart=0;                                   // chosen start (original stop index)
+let mIncluded=new Set();                        // included original stop indices
+function buildOrder(startOrig, included){
+  const n=DATA.stops.length, seq=[];
+  for(let k=0;k<n;k++){ const idx=(startOrig+k)%n; if(included.has(idx)) seq.push(idx); }
+  return seq;
+}
+function renderManageList(){
+  const list=document.getElementById('manageList'); list.innerHTML='';
+  DATA.stops.forEach((s,i)=>{
+    const on=mIncluded.has(i), isStart=(i===mStart);
+    const row=document.createElement('div'); row.className='mrow'+(on?'':' off');
+    row.innerHTML=`<div class="mnum">${i+1}</div><div class="mname">${s.name}</div>`
+      +`<button class="mstart${isStart?' on':''}" data-s="${i}">${isStart?'★ Start':'Set start'}</button>`
+      +`<button class="mtog" data-t="${i}">${on?'✓':'＋'}</button>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.mstart').forEach(b=>b.onclick=()=>{ mStart=+b.dataset.s; mIncluded.add(mStart); renderManageList(); });
+  list.querySelectorAll('.mtog').forEach(b=>b.onclick=()=>{ const i=+b.dataset.t;
+    if(mIncluded.has(i)){ if(mIncluded.size<=2) return; mIncluded.delete(i); if(mStart===i) mStart=buildOrder(mStart,mIncluded)[0]; }
+    else mIncluded.add(i);
+    renderManageList();
+  });
+}
+document.getElementById('manageBtn').onclick=()=>{
+  mStart=order[0]; mIncluded=new Set(order);
+  renderManageList();
+  document.getElementById('manageModal').classList.add('open');
+};
+document.getElementById('manageX').onclick=()=>document.getElementById('manageModal').classList.remove('open');
+document.getElementById('manageModal').onclick=e=>{ if(e.target.id==='manageModal') e.currentTarget.classList.remove('open'); };
+document.getElementById('manageApply').onclick=()=>{
+  if(!mIncluded.has(mStart)) mStart=[...mIncluded].sort((a,b)=>a-b)[0];
+  order=buildOrder(mStart, mIncluded);
+  cur=0; reached=new Set(); nextStop=0; skipping=false; touring=false; headingToStart=false; previewing=false;
+  narrationCache={};
+  document.getElementById('manageModal').classList.remove('open');
+  renderPanel(); setStartCta(true,'ready'); fitWhole();
+};
+
+/* real GPS */
+function inIframe(){ try{ return window.self!==window.top; }catch(e){ return true; } }
+function startGPS(){
+  const btn=document.getElementById('gpsBtn');
+  if(watchId!=null) return true;                          // already running
+  if(!('geolocation'in navigator)){ setStatus('Open in your browser for live GPS', true, true); maybeShowGpsBanner(true); return false; }
+  if(window.isSecureContext===false){ setStatus('Open in your browser for live GPS', true, true); maybeShowGpsBanner(true); return false; }
+  btn.classList.add('on'); setStatus('Locating…'); enableCompass();   // acquire location + compass heading
+  watchId=navigator.geolocation.watchPosition(
+    p=>{ const c=p.coords, la=c.latitude, lo=c.longitude;
+         if(c.speed!=null && !isNaN(c.speed)) lastSpeed=c.speed;
+         setMoving(lastSpeed);
+         let g=(c.heading!=null && !isNaN(c.heading) && (c.speed==null||c.speed>0.6)) ? c.heading : null;
+         if(g===null && lastPos && haversine(lastPos[0],lastPos[1],la,lo)>3) g=bearing(lastPos,[la,lo]);
+         if(g!==null) gpsHeading=g;
+         if(movingMode && gpsHeading!=null) pushHeading(gpsHeading, 0.45);   // moving -> trust GPS course
+         lastPos=[la,lo];
+         updatePosition(la,lo,c.accuracy); },
+    err=>{ btn.classList.remove('on'); watchId=null;
+      let m;
+      if(err.code===1) m='Location blocked — enable location access in settings';
+      else if(inIframe()) m='Open in your browser for live GPS';
+      else m='Location unavailable — try your browser';
+      setStatus(m,true,true);                              // auto-dismiss after a few seconds
+      if(err.code!==1) maybeShowGpsBanner(true);          // not a permission denial -> likely a WebView
+    },
+    {enableHighAccuracy:true, maximumAge:1000, timeout:12000}
+  );
+  return true;
+}
+// the ◎ button: center on the rider (and resume follow); start GPS if it isn't on yet
+function locateMe(){
+  if(watchId==null){ rotateOn=true; startGPS(); return; }
+  rotateOn=true;                                                    // re-engage heading-up navigation
+  if(riderHeading!=null) mapHeading=riderHeading;
+  if(me){ follow=true; state.z=Math.max(state.z,16); panToLatLon(me.lat,me.lon); }   // only move the map if we have a fix
+  else setStatus('Locating…');
+}
+
+document.getElementById('previewBtn').onclick=enterPreview;
+document.getElementById('previewEndBtn').onclick=exitPreview;
+document.getElementById('gpsBtn').onclick=locateMe;
+document.getElementById('voiceBtn').onclick=function(){ voiceOn=!voiceOn; this.classList.toggle('on',voiceOn); if(voiceOn){speak('Voice guide on.');} else if('speechSynthesis'in window){speechSynthesis.cancel();} };
+
+/* ---------- Tour panel (independent of map) ---------- */
+let cur=0;const $=id=>document.getElementById(id);
+let order=[];                                  // active sequence: positions -> original stop indices
+const stopAt=p=>DATA.stops[order[p]];          // stop object at active position p
+function renderPanel(){
+  if(!order.length) return;
+  const _nc=document.getElementById('nextCue'); if(_nc) _nc.style.display='none';   // shown only on arrival
+  const s=stopAt(cur), oi=order[cur], N=order.length;
+  $('emoji').textContent=s.emoji;$('tag').textContent=s.tagline;$('name').textContent=s.name;
+  $('desc').textContent=narrationCache[DATA.id+'|'+oi]||s.desc;   // AI narration enriches the stop info
+  $('tip').innerHTML='<b>Local tip:</b> '+s.tip;
+  $('progtxt').textContent=`Stop ${cur+1} of ${N}`;
+  $('progfill').style.width=(N>1?cur/(N-1)*100:0)+'%';
+  $('prev').disabled=cur===0;
+  $('next').textContent=cur===N-1?'Finish ✓':'Next stop ›';
+}
+function goTo(i){cur=Math.max(0,Math.min(order.length-1,i));renderPanel(); if(previewing) refreshNarration();
+  const s=stopAt(cur);state.z=Math.max(state.z,16);panToLatLon(s.lat,s.lon);}
+$('next').onclick=()=>{
+  if(cur===order.length-1){ previewing ? exitPreview() : openEndModal(); return; }   // finish -> end-of-tour options
+  if(previewing){ cur++; renderPanel(); refreshNarration(); const s=stopAt(cur); panToLatLon(s.lat,s.lon); return; }   // preview: read each stop
+  goEnroute();                                                                       // tour: head to next, narrate on arrival
+};
+$('prev').onclick=()=>goTo(cur-1);
+
+/* ---------- AI-generated between-stops narration ---------- */
+let narrationCache={};
+function narrationSystem(){
+  return `You are the Zoomr virtual e-scooter tour guide for "${DATA.tour.name}" in ${DATA.tour.city}. `
+    +`Write ONE short spoken narration (2-3 sentences, about 45-65 words) that a guide would say to a rider as they travel toward the destination below. `
+    +`Weave in one genuinely interesting, specific fact about the area, the route, or the destination. Warm, vivid, conversational. `
+    +`No greeting, no "welcome", no sign-off — just the narration as plain text.`;
+}
+function narrationUser(p){
+  const oi=order[p], s=DATA.stops[oi], prev=p>0?stopAt(p-1).name:'the start';
+  return `Previous point: ${prev}. Destination — stop ${p+1} of ${order.length}: ${s.name}. About it: ${s.desc}. `
+    +`Reference fact you may build on or improve: "${DATA.legs[oi]}"`;
+}
+async function refreshNarration(){
+  if(!order.length) return;
+  const p=cur, oi=order[p], key=DATA.id+'|'+oi, s=stopAt(p);
+  if(narrationCache[key]){ $('desc').textContent=narrationCache[key]; if(voiceOn) speak(narrationCache[key]); return; }
+  if(aiMode()==='off'){ $('desc').textContent=s.desc; if(voiceOn) speak(s.desc); return; }   // canned: read the stop info
+  $('desc').textContent=s.desc;                              // baseline while generating
+  const myTour=DATA;
+  try{
+    const text=await claudeRequest(narrationSystem(), [{role:'user',content:narrationUser(p)}], 240);
+    narrationCache[key]=text;
+    if(DATA===myTour && cur===p){ $('desc').textContent=text; if(voiceOn) speak(text); }   // AI fills the stop info
+  }catch(e){ /* keep the written description */ }
+}
+
+/* ---------- Ask the Guide (live Claude) ---------- */
+const modal=$('modal'),body=$('chatBody');
+let chatHistory=[];      // {role,content} for the current tour conversation
+const DEFAULT_MODEL='claude-haiku-4-5-20251001';
+const AI_ENABLED=false;  // canned answers for now — flip to true (and set key/endpoint) to enable live Claude later
+
+/* config persisted locally in the browser */
+function getCfg(){ try{return JSON.parse(localStorage.getItem('zoomrAI')||'{}');}catch(e){return {};} }
+function setCfg(c){ try{localStorage.setItem('zoomrAI',JSON.stringify(c));}catch(e){} }
+function aiMode(){ if(!AI_ENABLED) return 'off'; const c=getCfg(); if(c.endpoint) return 'proxy'; if(c.key) return 'direct'; return 'off'; }
+function refreshBadge(){
+  const gear=document.getElementById('gearBtn'), sub=document.getElementById('chatSub');
+  if(!AI_ENABLED){ if(gear) gear.style.display='none'; sub.textContent='Your Victoria guide'; return; }
+  const m=aiMode(), b=document.getElementById('modeBadge');
+  if(m==='proxy'){ b.className='badge live'; b.textContent='live · backend'; }
+  else if(m==='direct'){ b.className='badge live'; b.textContent='live · test key'; }
+  else { b.className='badge off'; b.textContent='offline'; }
+}
+
+/* messages */
+function addMsg(t,w){const d=document.createElement('div');d.className='msg '+w;d.textContent=t;body.appendChild(d);body.scrollTop=body.scrollHeight;return d;}
+function addTyping(){const d=document.createElement('div');d.className='msg bot';d.innerHTML='<span class="typing"><span></span><span></span><span></span></span>';body.appendChild(d);body.scrollTop=body.scrollHeight;return d;}
+
+/* build a tour-grounded system prompt */
+function buildSystemPrompt(){
+  const stops=order.map((oi,p)=>`${p+1}. ${DATA.stops[oi].name} — ${DATA.stops[oi].desc}`).join('\n');
+  const here=stopAt(cur);
+  return `You are the Zoomr virtual tour guide for the self-guided e-scooter tour "${DATA.tour.name}" in ${DATA.tour.city}. `
+    +`You are warm, concise and genuinely knowledgeable about the city, its history, food, nature and these specific stops. `
+    +`Answer the rider's questions helpfully in 2-4 short sentences unless they ask for more detail. `
+    +`If asked about live specifics you can't be sure of (current opening hours, prices, today's events), say so briefly and suggest they verify. `
+    +`Stay friendly and on-topic for a city e-scooter tour.\n\n`
+    +`TOUR STOPS (in order):\n${stops}\n\n`
+    +`The rider is currently at stop ${cur+1}: ${here.name}. Tour length: ${DATA.km} km, about ${DATA.dur}.`;
+}
+
+/* offline fallback (keyword match) */
+function offlineAnswer(q){const lq=q.toLowerCase();
+  const qa = inTour() ? DATA.qa : TOURS.flatMap(t=>t.qa);
+  for(const it of qa){if(it.k.some(k=>lq.includes(k)))return it.a;}
+  return "I don't have an answer ready for that one yet! I can help with food, wildlife, history, washrooms, distance, weather, parking, and Zoomr rules — try one of those.";}
+
+/* low-level Claude call — direct (browser+key) or via backend proxy. Shared by chat + narration. */
+async function claudeRequest(system, messages, maxTokens){
+  const cfg=getCfg(), model=cfg.model||DEFAULT_MODEL;
+  const payload={model,max_tokens:maxTokens||500,system,messages};
+  let res;
+  if(cfg.endpoint){
+    res=await fetch(cfg.endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+  }else{
+    res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{
+      'content-type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify(payload)});
+  }
+  if(!res.ok){
+    let msg='Request failed ('+res.status+').';
+    if(res.status===401) msg='That API key was rejected. Check it in ⚙ settings.';
+    else if(res.status===429) msg='Rate limited — give it a moment and try again.';
+    else { try{const e=await res.json(); if(e.error&&e.error.message) msg=e.error.message;}catch(_){} }
+    throw new Error(msg);
+  }
+  const data=await res.json();
+  return (data.content&&data.content[0]&&data.content[0].text)|| data.text || '(no answer)';
+}
+
+async function send(q){
+  if(!q.trim()) return;
+  addMsg(q,'me');
+  if(aiMode()==='off'){ addMsg(offlineAnswer(q),'bot'); return; }
+  chatHistory.push({role:'user',content:q});
+  const sendBtn=$('sendBtn'); sendBtn.disabled=true;
+  const typing=addTyping();
+  try{
+    const text=await claudeRequest(buildSystemPrompt(), chatHistory, 500);
+    typing.remove();
+    addMsg(text,'bot');
+    chatHistory.push({role:'assistant',content:text});
+    if(chatHistory.length>16) chatHistory=chatHistory.slice(-16); // keep context bounded
+  }catch(err){
+    typing.remove();
+    addMsg('⚠ '+err.message,'bot');
+    chatHistory.pop(); // drop the unanswered user turn
+  }finally{ sendBtn.disabled=false; $('chatInput').focus(); }
+}
+
+function inTour(){ return pickerEl && pickerEl.classList.contains('hidden'); }
+function greet(){ if(!body.dataset.init){
+  addMsg(inTour()
+    ? `Hi! I'm your Zoomr guide for the ${DATA.tour.name} in ${DATA.tour.city}. Ask me anything about the route or the city.`
+    : `Hi! I'm your Zoomr guide for Victoria, BC. Ask me about any of the tours or the city.`,'bot');
+  body.dataset.init='1'; } }
+function openChat(){ modal.classList.add('open'); refreshBadge(); greet(); }
+$('askBtn').onclick=openChat;
+$('askBtnPicker').onclick=openChat;
+$('chatX').onclick=()=>modal.classList.remove('open');
+modal.onclick=e=>{if(e.target===modal)modal.classList.remove('open');};
+$('sendBtn').onclick=()=>{const v=$('chatInput').value;$('chatInput').value='';send(v);};
+$('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=e.target.value;e.target.value='';send(v);}});
+["Where can I eat?","Will I see any wildlife?","How long does it take?","Where are washrooms?"].forEach(c=>{const b=document.createElement('button');b.className='chip';b.textContent=c;b.onclick=()=>send(c);$('chips').appendChild(b);});
+
+/* settings panel */
+$('gearBtn').onclick=()=>{ const c=getCfg(); $('cfgKey').value=c.key||''; $('cfgEndpoint').value=c.endpoint||''; $('cfgModel').value=c.model||''; document.getElementById('settings').classList.toggle('open'); };
+$('cfgSave').onclick=()=>{
+  setCfg({ key:$('cfgKey').value.trim(), endpoint:$('cfgEndpoint').value.trim(), model:$('cfgModel').value.trim() });
+  document.getElementById('settings').classList.remove('open'); refreshBadge();
+  addMsg(aiMode()==='off'?'Saved. Add a key or backend endpoint to go live.':'Live AI guide enabled. Ask me anything!','bot');
+};
+refreshBadge();
+
+/* ---------- tour picker + loading ---------- */
+const pickerEl=document.getElementById('picker');
+const cardsEl=document.getElementById('tourCards');
+function shade(hex){const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;r=Math.round(r*.65);g=Math.round(g*.65);b=Math.round(b*.65);return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);}
+/* per-tour scenic SVG banner (replaceable later with a real photo via tour.photo) */
+function banner(t){
+  const W=400,H=120, id=t.id;
+  const sky=(a,b)=>`<defs><linearGradient id="sky_${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="${W}" height="${H}" fill="url(#sky_${id})"/>`;
+  let s='';
+  if(id==='coastal'){
+    s=sky('#bfeaf0','#eafafb')
+     +`<circle cx="322" cy="36" r="17" fill="#ffe08a"/>`
+     +`<path d="M0 86 H400 V120 H0 Z" fill="#2bb6c4"/>`
+     +`<path d="M0 86 Q100 79 200 86 T400 86" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="3"/>`
+     +`<path d="M0 100 Q100 93 200 100 T400 100" fill="none" stroke="#fff" stroke-opacity=".4" stroke-width="3"/>`
+     +`<path d="M64 62 l28 0 l-26 22 Z" fill="#0e6e79"/><rect x="63" y="40" width="2.5" height="24" fill="#0e6e79"/>`;
+  } else if(id==='gorge'){
+    s=sky('#cdeef0','#eafafb')
+     +`<path d="M0 70 Q120 42 230 70 T400 66 V120 H0 Z" fill="#3aa56a"/>`
+     +`<path d="M0 94 Q160 80 400 94 V120 H0 Z" fill="#2e7d52"/>`
+     +[40,92,150].map(x=>`<path d="M${x} 80 l-11 18 h22 Z" fill="#1f5e3d"/><rect x="${x-2}" y="94" width="4" height="6" fill="#5b3a1e"/>`).join('')
+     +`<rect x="236" y="74" width="160" height="6" fill="#7a4a22"/>`+[248,274,300,326,352,378].map(x=>`<rect x="${x}" y="80" width="4" height="18" fill="#7a4a22"/>`).join('');
+  } else {
+    s=sky('#d7e6f5','#f1f6fb')
+     +`<rect x="150" y="48" width="100" height="60" fill="#7c6b8f"/>`
+     +`<rect x="168" y="30" width="20" height="78" fill="#6a5a7d"/><rect x="212" y="30" width="20" height="78" fill="#6a5a7d"/>`
+     +[150,168,186,204,222,240].map(x=>`<rect x="${x}" y="40" width="9" height="9" fill="#7c6b8f"/>`).join('')
+     +`<rect x="192" y="76" width="16" height="32" fill="#4a3d5e"/>`
+     +`<rect x="176" y="18" width="2" height="14" fill="#6a5a7d"/><path d="M178 18 l12 4 l-12 5 Z" fill="#cf5b5b"/>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">${s}</svg>`;
+}
+function buildCards(){
+  cardsEl.innerHTML='';
+  TOURS.forEach((t,i)=>{
+    const card=document.createElement('div'); card.className='tcard';
+    const art = t.photo ? `<img src="${t.photo}" alt="${t.tour.name}">` : banner(t);
+    card.innerHTML=`<div class="tcard-band">${art}<div class="tcard-emoji">${t.emoji}</div></div>
+      <div class="tcard-go">Start ›</div>
+      <div class="tcard-body"><div class="tcard-name">${t.tour.name}</div>
+        <div class="tcard-blurb">${t.blurb||''}</div>
+        <div class="tcard-meta"><span>📍 ${t.stops.length} stops</span><span>🛴 ${t.km} km</span><span>⏱ ${t.dur}</span></div></div>`;
+    card.onclick=()=>loadTour(i);
+    cardsEl.appendChild(card);
+  });
+}
+function clearLive(){
+  if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null;document.getElementById('gpsBtn').classList.remove('on');}
+  if('speechSynthesis'in window)speechSynthesis.cancel();
+  me=null; if(meDot){meDot.style.display='none';} follow=false;
+  rotateOn=false; mapHeading=0; riderHeading=null; lastPos=null; gpsHeading=null; compassHeading=null; lastSpeed=0;
+  movingMode=false; hvx=null; hvy=null;
+  if(navReq!=null){ cancelAnimationFrame(navReq); navReq=null; } dispLat=null; dispLon=null;
+  reached=new Set(); nextStop=0; cur=0;
+  touring=false; headingToStart=false; previewing=false; skipping=false; returningToHub=false; phase='enroute';
+  document.getElementById('endNowBtn').style.display='none';
+  const _nc=document.getElementById('nextCue'); if(_nc) _nc.style.display='none';
+  document.getElementById('status').style.display='none';
+}
+function showPicker(){ clearLive(); body.innerHTML=''; delete body.dataset.init; chatHistory=[]; pickerEl.classList.remove('hidden'); }
+function loadTour(i){
+  DATA=TOURS[i];
+  clearLive();
+  body.innerHTML=''; delete body.dataset.init; chatHistory=[]; narrationCache={};   // reset chat + narration for new tour
+  document.getElementById('tourName').textContent=DATA.tour.name;
+  document.getElementById('pill').textContent=`${DATA.km} km · ${DATA.dur}`;
+  DATA.stops.forEach(s=>{ s._r=Math.max(55, distToRoute(s.lat,s.lon)+30); }); // per-stop arrival radius
+  order=DATA.stops.map((_,i)=>i);            // default: all stops in original order
+  hubIdx=DATA.stops.findIndex(s=>/zoomr zone/i.test(s.name)); if(hubIdx<0) hubIdx=DATA.stops.findIndex(s=>/qv cafe/i.test(s.name)); if(hubIdx<0) hubIdx=0;
+  maneuvers = DATA._man || (DATA._man=buildManeuvers(DATA));   // turn-by-turn cues along the path
+  loadStreetCache();                          // street names from cache (boot prefetch fills any missing)
+  bounds=computeBounds();
+  renderPanel();
+  setStartCta(true,'ready');                 // show "Start tour" until the rider begins
+  pickerEl.classList.add('hidden');
+  if(!landscapeMode()) sheetEl.style.height=Math.round(appEl.clientHeight*0.44)+'px';  // leave the map visible
+  fitWhole();
+  startGPS();                                 // auto-request location when a tour is selected
+}
+document.getElementById('backBtn').onclick=showPicker;
+
+/* ---------- boot ---------- */
+function initApp(){
+  buildCards();
+  renderPanel();
+  document.getElementById('voiceBtn').classList.toggle('on', voiceOn);   // voice guide on by default
+  TOURS.forEach(t=>{ t._man=buildManeuvers(t); loadStreetCacheInto(t._man,t.id); });   // per-tour turn cues (+ overrides)
+  setTimeout(startPrefetch, 1200);           // prefetch street names + warm map tiles for all routes
+}
+// load editable tour data; fall back to the embedded copy (offline / file://)
+fetch('tours.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{ if(Array.isArray(d)&&d.length){ TOURS=d; DATA=TOURS[0]; } }).catch(()=>{}).finally(initApp);
+// Test-bench preview: load tour data injected by the admin editor (postMessage)
+window.addEventListener('message',function(e){ const d=e&&e.data; if(d && d.zoomrPreview && Array.isArray(d.zoomrTours) && d.zoomrTours.length){ TOURS=d.zoomrTours; DATA=TOURS[0]; TOURS.forEach(t=>t._man=null); try{showPicker();}catch(_){ } initApp(); } });
+/* local testing: load an edited tours.json by hand (file:// can't fetch it). Hidden on the live site. */
+if(location.protocol==='file:'){ var dt=document.getElementById('devTools'); if(dt) dt.style.display='block'; }
+(function(){ var b=document.getElementById('devLoadBtn'), inp=document.getElementById('devLoad'); if(!b||!inp) return;
+  b.onclick=()=>inp.click();
+  inp.onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+    r.onload=()=>{ try{ const d=JSON.parse(r.result); if(Array.isArray(d)&&d.length){ TOURS=d; DATA=TOURS[0]; TOURS.forEach(t=>{t._man=null;}); initApp(); document.getElementById('devLoadMsg').textContent='✓ loaded '+f.name; } else alert('That file has no tours.'); }catch(err){ alert('Invalid JSON: '+err.message); } };
+    r.readAsText(f); };
+})();
+window.addEventListener('resize',()=>{ if(landscapeMode()) sheetEl.style.height=''; render(); });
+window.addEventListener('orientationchange',()=>{ if(landscapeMode()) sheetEl.style.height=''; setTimeout(render,300); }); // re-fit tiles after rotation settles
+
+/* "open in browser" banner — shown in WebViews / embeds where live GPS is blocked */
+function isWebView(){
+  const ua=navigator.userAgent||'';
+  const ios=/iPhone|iPad|iPod/.test(ua);
+  const iosWV=ios && !/Safari/.test(ua);          // iOS in-app WebView UA lacks "Safari"
+  const androidWV=/;\s?wv\)/.test(ua) || /\bwv\b/.test(ua);
+  return iosWV || androidWV;
+}
+function gbDismissed(){ try{ return sessionStorage.getItem('gbDismissed')==='1'; }catch(e){ return false; } }
+function copyLink(url){
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(url); return true; }
+    const i=document.createElement('input'); i.value=url; i.style.position='fixed'; i.style.opacity='0';
+    document.body.appendChild(i); i.focus(); i.select(); const ok=document.execCommand('copy'); i.remove(); return ok;
+  }catch(e){ return false; }
+}
+function hintBanners(msg){ document.querySelectorAll('.gpsBanner .gb-txt').forEach(e=>e.textContent=msg); }
+function openExternally(){
+  const url=location.href, ua=navigator.userAgent||'';
+  const copied=copyLink(url);
+  // best-effort jump to the system browser (works on Android / iOS-with-Chrome; iOS Safari can't be forced)
+  if(/Android/.test(ua)){ window.location.href='intent://'+url.replace(/^https?:\/\//,'')+'#Intent;scheme=https;end'; }
+  else if(/iPhone|iPad|iPod/.test(ua)){ window.location.href='googlechromes://'+url.replace(/^https?:\/\//,''); }
+  else { window.open(url,'_blank','noopener'); }
+  setTimeout(()=>hintBanners(copied?'✓ Link copied — paste it into Safari or Chrome':'Open Safari/Chrome and go to this site for GPS'),700);
+}
+function showBanners(){ document.querySelectorAll('.gpsBanner').forEach(b=>b.classList.add('show')); setTimeout(render,250); }
+function maybeShowGpsBanner(force){ if(gbDismissed() && !force) return; if(force || inIframe() || isWebView()) showBanners(); }
+document.querySelectorAll('.gb-open').forEach(b=>b.addEventListener('click',openExternally));
+document.querySelectorAll('.gb-close').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.gpsBanner').forEach(x=>x.classList.remove('show'));
+  try{ sessionStorage.setItem('gbDismissed','1'); }catch(e){}
+  setTimeout(render,250);
+}));
+maybeShowGpsBanner();
+// start on the picker; a tour loads when the user taps a card
+</script>
+</body>
+</html>
