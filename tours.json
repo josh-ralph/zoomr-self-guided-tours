@@ -4771,7 +4771,11 @@
         "a": "Zoomrs start and end at a Zoomr Zone hub (the pilot hub is at QV Cafe & Bakery). Lock to the rack when you're done — ending a ride outside a Zone adds fees."
       }
     ],
-    "blurb": "The long, leafy one. Follow the Galloping Goose rail-trail and the tidal Gorge waterway past murals, herons and a historic wooden trestle."
+    "blurb": "The long, leafy one. Follow the Galloping Goose rail-trail and the tidal Gorge waterway past murals, herons and a historic wooden trestle.",
+    "zones": {
+      "stopScale": 1,
+      "turnScale": 0.4
+    }
   },
   {
     "id": "cobble",
@@ -6364,6 +6368,10 @@
         "a": "Zoomrs start and end at a Zoomr Zone hub (the pilot hub is at QV Cafe & Bakery). Lock to the rack when you're done — ending a ride outside a Zone adds fees."
       }
     ],
-    "blurb": "A heritage cruise through Victoria's grandest architecture — the Empress, the Parliament Buildings, and two genuine Victorian castles."
+    "blurb": "A heritage cruise through Victoria's grandest architecture — the Empress, the Parliament Buildings, and two genuine Victorian castles.",
+    "zones": {
+      "stopScale": 1,
+      "turnScale": 0.45
+    }
   }
 ]
