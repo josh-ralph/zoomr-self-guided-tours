@@ -2110,7 +2110,8 @@
         "emoji": "☕",
         "tagline": "Your starting line & Zoomr Zone",
         "desc": "Grab a coffee and a fresh pastry before you roll out. This is your Zoomr Zone — unlock your Zoomr in the Levy app, snap on your helmet, and meet your virtual guide. The Coastal Loop is a ~7 km mostly-flat ride hugging Victoria's waterfront.",
-        "tip": "Fill your water bottle here — the next café stop isn't until you loop back."
+        "tip": "Fill your water bottle here — the next café stop isn't until you loop back.",
+        "r": 30
       },
       {
         "name": "Inner Harbour",
@@ -2304,13 +2305,6 @@
       },
       "added": [
         {
-          "i": 2,
-          "lat": 48.42938,
-          "lon": -123.36708,
-          "angle": -91.22637445978035,
-          "text": "Turn left down Government"
-        },
-        {
           "i": 96,
           "lat": 48.42067,
           "lon": -123.36888,
@@ -2329,7 +2323,8 @@
           "lat": 48.41529,
           "lon": -123.3839,
           "angle": 34.788030629162904,
-          "text": "Bear right onto Dallas Road waterfront trail"
+          "text": "Bear right onto Dallas Road waterfront trail",
+          "r": 35
         },
         {
           "i": 474,
@@ -2346,6 +2341,10 @@
           "text": "Turn right"
         }
       ]
+    },
+    "zones": {
+      "stopScale": 1,
+      "turnScale": 0.4
     }
   },
   {
