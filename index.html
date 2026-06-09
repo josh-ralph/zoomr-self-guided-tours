@@ -1196,8 +1196,38 @@ function initApp(){
 }
 // load editable tour data; fall back to the embedded copy (offline / file://)
 fetch('tours.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{ if(Array.isArray(d)&&d.length){ TOURS=d; DATA=TOURS[0]; } }).catch(()=>{}).finally(initApp);
-// Test-bench preview: load tour data injected by the admin editor (postMessage)
-window.addEventListener('message',function(e){ const d=e&&e.data; if(d && d.zoomrPreview && Array.isArray(d.zoomrTours) && d.zoomrTours.length){ TOURS=d.zoomrTours; DATA=TOURS[0]; TOURS.forEach(t=>t._man=null); try{showPicker();}catch(_){ } initApp(); } });
+// Test-bench (admin only): receive previewed data + simulation commands via postMessage
+let simTimer=null, simDist=0, simSpeedKmh=20, simLastPos=null;
+function simPosAt(dist){ const R=DATA.route; let acc=0; for(let i=1;i<R.length;i++){ const d=haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); if(acc+d>=dist){ const t=(dist-acc)/(d||1); return {lat:R[i-1][0]+(R[i][0]-R[i-1][0])*t, lon:R[i-1][1]+(R[i][1]-R[i-1][1])*t, done:false}; } acc+=d; } const last=R[R.length-1]; return {lat:last[0],lon:last[1],done:true}; }
+function simStop(){ if(simTimer){ clearInterval(simTimer); simTimer=null; } }
+function simTick(){
+  if(!DATA||!DATA.route) return;
+  simDist += (simSpeedKmh/3.6)*0.1;                 // metres advanced this 100ms tick
+  const p=simPosAt(simDist);
+  if(simLastPos){ const b=bearing(simLastPos,[p.lat,p.lon]); gpsHeading=b; lastSpeed=simSpeedKmh/3.6; setMoving(lastSpeed); pushHeading(b,0.6); }
+  simLastPos=[p.lat,p.lon];
+  updatePosition(p.lat,p.lon,6);
+  if(p.done) simStop();
+}
+function simStart(idx, speed){
+  simStop(); simSpeedKmh=speed||20;
+  if(watchId!=null){ try{navigator.geolocation.clearWatch(watchId);}catch(e){} watchId=null; }  // no real GPS during sim
+  loadTour(idx||0);
+  touring=true; previewing=false; headingToStart=false; returningToHub=false; phase='enroute';
+  reached=new Set(); nextStop=0; skipping=false; rotateOn=true; follow=true; resetManeuvers();
+  simDist=0; simLastPos=null;
+  simTimer=setInterval(simTick,100);
+}
+window.addEventListener('message',function(e){ const d=e&&e.data; if(!d) return;
+  if(d.zoomrPreview && Array.isArray(d.zoomrTours) && d.zoomrTours.length){ window.__zoomrPreview=true; simStop(); TOURS=d.zoomrTours; DATA=TOURS[0]; TOURS.forEach(t=>t._man=null); try{showPicker();}catch(_){ } initApp(); return; }
+  if(d.zoomrSim && window.__zoomrPreview){
+    if(d.zoomrSim==='start') simStart(d.idx||0, d.speed||20);
+    else if(d.zoomrSim==='speed') simSpeedKmh=d.speed||20;
+    else if(d.zoomrSim==='pause'){ if(simTimer){ clearInterval(simTimer); simTimer=null; } }
+    else if(d.zoomrSim==='resume'){ if(!simTimer && DATA && DATA.route){ simTimer=setInterval(simTick,100); } }
+    else if(d.zoomrSim==='stop') simStop();
+  }
+});
 /* local testing: load an edited tours.json by hand (file:// can't fetch it). Hidden on the live site. */
 if(location.protocol==='file:'){ var dt=document.getElementById('devTools'); if(dt) dt.style.display='block'; }
 (function(){ var b=document.getElementById('devLoadBtn'), inp=document.getElementById('devLoad'); if(!b||!inp) return;
