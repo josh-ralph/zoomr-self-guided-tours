@@ -2110,8 +2110,7 @@
         "emoji": "☕",
         "tagline": "Your starting line & Zoomr Zone",
         "desc": "Grab a coffee and a fresh pastry before you roll out. This is your Zoomr Zone — unlock your Zoomr in the Levy app, snap on your helmet, and meet your virtual guide. The Coastal Loop is a ~7 km mostly-flat ride hugging Victoria's waterfront.",
-        "tip": "Fill your water bottle here — the next café stop isn't until you loop back.",
-        "r": 30
+        "tip": "Fill your water bottle here — the next café stop isn't until you loop back."
       },
       {
         "name": "Inner Harbour",
@@ -2151,13 +2150,12 @@
       },
       {
         "name": "Beacon Hill Park",
-        "lat": 48.410332,
-        "lon": -123.361176,
+        "lat": 48.415102,
+        "lon": -123.364558,
         "emoji": "🦚",
         "tagline": "Gardens, peacocks & Mile 0",
         "desc": "Beacon Hill Park is 200 acres of gardens, ponds, and roaming peacocks, plus a children's petting farm. Nearby stands Mile 0 of the Trans-Canada Highway and a towering totem pole. It's the green finish before you coast back to the café.",
-        "tip": "Mile 0 and the Terry Fox statue are a 2-minute detour — worth the photo.",
-        "r": 140
+        "tip": "Mile 0 and the Terry Fox statue are a 2-minute detour — worth the photo."
       }
     ],
     "legs": [
@@ -2306,6 +2304,13 @@
       },
       "added": [
         {
+          "i": 2,
+          "lat": 48.42938,
+          "lon": -123.36708,
+          "angle": -91.22637445978035,
+          "text": "Turn left down Government"
+        },
+        {
           "i": 96,
           "lat": 48.42067,
           "lon": -123.36888,
@@ -2341,10 +2346,6 @@
           "text": "Turn right"
         }
       ]
-    },
-    "zones": {
-      "stopScale": 1.15,
-      "turnScale": 0.4
     }
   },
   {
@@ -4624,8 +4625,7 @@
         "emoji": "🎨",
         "tagline": "Open-air street-art gallery",
         "desc": "Along the old rail corridor, the Trackside Art Wall is a rotating canvas of legal graffiti and murals — one of the city's best free art stops.",
-        "tip": "Great photo backdrop; the murals change often.",
-        "r": 110
+        "tip": "Great photo backdrop; the murals change often."
       },
       {
         "name": "Richards Island Viewpoint",
@@ -4652,8 +4652,7 @@
         "emoji": "🛶",
         "tagline": "Quiet waterfront dock",
         "desc": "Bamfield Park's little dock is a calm rest stop and a popular kayak launch tucked along the Gorge.",
-        "tip": "Good spot to stretch and refill before the trestle.",
-        "r": 60
+        "tip": "Good spot to stretch and refill before the trestle."
       },
       {
         "name": "Selkirk Trestle",
@@ -4662,8 +4661,7 @@
         "emoji": "🚂",
         "tagline": "Historic wooden trestle",
         "desc": "The Selkirk Trestle is one of Canada's longest wooden rail trestles, now a walking-and-cycling bridge you ride right across the water.",
-        "tip": "Stop mid-span for the best view of the Gorge.",
-        "r": 115
+        "tip": "Stop mid-span for the best view of the Gorge."
       }
     ],
     "legs": [
@@ -4774,67 +4772,7 @@
         "a": "Zoomrs start and end at a Zoomr Zone hub (the pilot hub is at QV Cafe & Bakery). Lock to the rack when you're done — ending a ride outside a Zone adds fees."
       }
     ],
-    "blurb": "The long, leafy one. Follow the Galloping Goose rail-trail and the tidal Gorge waterway past murals, herons and a historic wooden trestle.",
-    "turns": {
-      "edits": {
-        "282": {
-          "r": 160
-        },
-        "367": {
-          "r": 100
-        },
-        "401": {
-          "off": true
-        },
-        "419": {
-          "off": true
-        },
-        "428": {
-          "off": true
-        },
-        "432": {
-          "text": "Turn left to see the Trestle",
-          "r": 55
-        },
-        "435": {
-          "r": 40
-        },
-        "446": {
-          "off": true
-        },
-        "508": {
-          "r": 55,
-          "off": true
-        }
-      },
-      "added": [
-        {
-          "i": 403,
-          "lat": 48.43902,
-          "lon": -123.38865,
-          "angle": -20.10938352369635,
-          "text": "Turn left onto path towards pier"
-        },
-        {
-          "i": 502,
-          "lat": 48.428946,
-          "lon": -123.374788,
-          "angle": -8.65657306508615,
-          "text": "Bear left onto path to cross Johnson St. Bridge"
-        },
-        {
-          "i": 557,
-          "lat": 48.42938,
-          "lon": -123.36708,
-          "angle": -32.0713047208169,
-          "text": "Turn right to finish at QV Cafe"
-        }
-      ]
-    },
-    "zones": {
-      "stopScale": 1,
-      "turnScale": 0.45
-    }
+    "blurb": "The long, leafy one. Follow the Galloping Goose rail-trail and the tidal Gorge waterway past murals, herons and a historic wooden trestle."
   },
   {
     "id": "cobble",
