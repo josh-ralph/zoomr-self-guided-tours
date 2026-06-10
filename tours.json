@@ -3,7 +3,10 @@
     "guide": {
       "endpoint": "https://zoomr-guide.zoomr-ca.workers.dev",
       "model": "claude-sonnet-4-6",
-      "liveNarration": false
+      "liveNarration": false,
+      "rate": 1,
+      "voice": "",
+      "knowledge": ""
     }
   },
   "tours": [
@@ -2118,8 +2121,7 @@
           "emoji": "☕",
           "tagline": "Your starting line & Zoomr Zone",
           "desc": "Grab a coffee and a fresh pastry before you roll out. This is your Zoomr Zone — unlock your Zoomr in the Levy app, snap on your helmet, and meet your virtual guide. The Coastal Loop is a ~7 km mostly-flat ride hugging Victoria's waterfront.",
-          "tip": "Fill your water bottle here — the next café stop isn't until you loop back.",
-          "r": 30
+          "tip": "Fill your water bottle here — the next café stop isn't until you loop back."
         },
         {
           "name": "Inner Harbour",
@@ -2313,6 +2315,13 @@
         },
         "added": [
           {
+            "i": 2,
+            "lat": 48.42938,
+            "lon": -123.36708,
+            "angle": -91.22637445978035,
+            "text": "Turn left down Government"
+          },
+          {
             "i": 96,
             "lat": 48.42067,
             "lon": -123.36888,
@@ -2331,8 +2340,7 @@
             "lat": 48.41529,
             "lon": -123.3839,
             "angle": 34.788030629162904,
-            "text": "Bear right onto Dallas Road waterfront trail",
-            "r": 35
+            "text": "Bear right onto Dallas Road waterfront trail"
           },
           {
             "i": 474,
@@ -2349,10 +2357,6 @@
             "text": "Turn right"
           }
         ]
-      },
-      "zones": {
-        "stopScale": 1,
-        "turnScale": 0.4
       }
     },
     {
@@ -4779,11 +4783,7 @@
           "a": "Zoomrs start and end at a Zoomr Zone hub (the pilot hub is at QV Cafe & Bakery). Lock to the rack when you're done — ending a ride outside a Zone adds fees."
         }
       ],
-      "blurb": "The long, leafy one. Follow the Galloping Goose rail-trail and the tidal Gorge waterway past murals, herons and a historic wooden trestle.",
-      "zones": {
-        "stopScale": 1,
-        "turnScale": 0.4
-      }
+      "blurb": "The long, leafy one. Follow the Galloping Goose rail-trail and the tidal Gorge waterway past murals, herons and a historic wooden trestle."
     },
     {
       "id": "cobble",
@@ -6376,11 +6376,7 @@
           "a": "Zoomrs start and end at a Zoomr Zone hub (the pilot hub is at QV Cafe & Bakery). Lock to the rack when you're done — ending a ride outside a Zone adds fees."
         }
       ],
-      "blurb": "A heritage cruise through Victoria's grandest architecture — the Empress, the Parliament Buildings, and two genuine Victorian castles.",
-      "zones": {
-        "stopScale": 1,
-        "turnScale": 0.45
-      }
+      "blurb": "A heritage cruise through Victoria's grandest architecture — the Empress, the Parliament Buildings, and two genuine Victorian castles."
     }
   ]
 }
