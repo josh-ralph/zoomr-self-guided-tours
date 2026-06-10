@@ -588,6 +588,20 @@ const fmt=m=> m<1000 ? Math.round(m/5)*5+' m' : (m/1000).toFixed(1)+' km';
 let statusTimer=null;
 function setStatus(t,warn,autohide){clearTimeout(statusTimer);statusEl.style.display='block';statusEl.textContent=t;statusEl.classList.toggle('warn',!!warn);if(autohide)statusTimer=setTimeout(()=>{statusEl.style.display='none';},5000);}
 let speechQ=[], speaking=false, preferredVoice=null;
+function cleanForSpeech(t){
+  if(!t) return '';
+  let s=String(t);
+  s=s.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu,' '); // emoji/symbols/arrows
+  s=s.replace(/```[\s\S]*?```/g,' ').replace(/`([^`]*)`/g,'$1');     // code
+  s=s.replace(/\*\*([^*]+)\*\*/g,'$1').replace(/\*([^*]+)\*/g,'$1'); // **bold** *italic*
+  s=s.replace(/__([^_]+)__/g,'$1').replace(/(^|\s)_([^_]+)_/g,'$1$2');   // __bold__ _italic_
+  s=s.replace(/^#{1,6}\s*/gm,'').replace(/^\s*[-*\u2022]\s+/gm,'');   // headings, bullets
+  s=s.replace(/\[([^\]]+)\]\([^)]+\)/g,'$1');                         // [text](url) -> text
+  s=s.replace(/[*_#>`~|\u2022\u25CF\u25E6\u2023]/g,' ');                  // stray markdown/bullet chars
+  s=s.replace(/\bZoomr\b/gi,'Zoomer');                                  // brand pronunciation
+  s=s.replace(/\s+([,.!?;:])/g,'$1');                                    // tidy spaces before punctuation
+  return s.replace(/\s{2,}/g,' ').trim();
+}
 function pickVoice(){
   if(!('speechSynthesis'in window)) return;
   const vs=speechSynthesis.getVoices(); if(!vs||!vs.length) return;
@@ -611,7 +625,7 @@ function speak(t,type,force){ if((!voiceOn&&!force)||!('speechSynthesis'in windo
   pumpSpeech();
 }
 function pumpSpeech(){ if(speaking||!speechQ.length) return; const it=speechQ.shift(); speaking=true;
-  try{ const u=new SpeechSynthesisUtterance(it.t); if(!preferredVoice) pickVoice(); if(preferredVoice){ u.voice=preferredVoice; u.lang=preferredVoice.lang||'en-US'; } u.rate=GUIDE_RATE||1; u.pitch=1.0; u.onend=()=>{ speaking=false; pumpSpeech(); }; u.onerror=()=>{ speaking=false; pumpSpeech(); }; speechSynthesis.speak(u); }
+  try{ const u=new SpeechSynthesisUtterance(cleanForSpeech(it.t)); if(!preferredVoice) pickVoice(); if(preferredVoice){ u.voice=preferredVoice; u.lang=preferredVoice.lang||'en-US'; } u.rate=GUIDE_RATE||1; u.pitch=1.0; u.onend=()=>{ speaking=false; pumpSpeech(); }; u.onerror=()=>{ speaking=false; pumpSpeech(); }; speechSynthesis.speak(u); }
   catch(e){ speaking=false; }
 }
 function stopSpeech(){ speechQ=[]; speaking=false; if('speechSynthesis'in window) speechSynthesis.cancel(); }
@@ -1038,6 +1052,7 @@ function buildSystemPrompt(){
     const list=TOURS.map(t=>`• ${t.tour.name} — ${t.km} km, about ${t.dur}. ${t.blurb||''}`).join('\n');
     return `You are the Zoomr virtual guide for self-guided e-scooter tours in ${TOURS[0]?TOURS[0].tour.city:'Victoria, BC'}. `
       +`The rider hasn't chosen a tour yet — help them pick. Be warm and concise (2-4 sentences). `
+      +`Reply in plain conversational text only — no markdown, asterisks, bullet lists, headings or emojis (your reply may be read aloud). `
       +`If they ask which is most relaxed, scenic, family-friendly, shortest, etc., recommend one of these and say why briefly. `
       +`Don't invent tours beyond this list.\n\nAVAILABLE TOURS:\n${list}`;
   }
@@ -1047,7 +1062,7 @@ function buildSystemPrompt(){
     +`You are warm, concise and genuinely knowledgeable about the city, its history, food, nature and these specific stops. `
     +`Answer the rider's questions helpfully in 2-4 short sentences unless they ask for more detail. `
     +`If asked about live specifics you can't be sure of (current opening hours, prices, today's events), say so briefly and suggest they verify. `
-    +`Stay friendly and on-topic for a city e-scooter tour.\n\n`
+    +`Stay friendly and on-topic for a city e-scooter tour. Reply in plain conversational text only — no markdown, asterisks, bullet lists, headings or emojis, since your reply may be read aloud.\n\n`
     +`TOUR STOPS (in order):\n${stops}\n\n`
     +`The rider is currently at stop ${(cur|0)+1}: ${here&&here.name?here.name:'the start'}. Tour length: ${DATA.km} km, about ${DATA.dur}.`;
 }
