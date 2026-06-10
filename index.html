@@ -134,6 +134,10 @@
   .chat-input{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
   .chat-input input{flex:1;border:1px solid var(--line);border-radius:999px;padding:11px 15px;font-size:14px;outline:none}
   .chat-input button{border:none;background:var(--orange);color:#fff;border-radius:999px;padding:0 18px;font-weight:700;cursor:pointer}
+  .mic{background:#eef0f4 !important;color:#333 !important;padding:0 14px !important;font-size:17px}
+  .mic.listening{background:#e8590c !important;color:#fff !important;animation:micpulse 1s infinite}
+  @keyframes micpulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .vhint{font-size:11px;color:#8a8f98;padding:0 16px 10px;text-align:center}
   .chat-input button:disabled{opacity:.5}
   .gear{border:none;background:#eef0f4;width:30px;height:30px;border-radius:50%;font-size:15px;cursor:pointer}
   .typing{display:inline-flex;gap:4px;align-items:center}
@@ -300,13 +304,14 @@
     <label>Backend endpoint (optional — for the live site, leave key blank)
       <input id="cfgEndpoint" type="text" placeholder="https://your-worker.workers.dev" autocomplete="off"/></label>
     <label>Model
-      <input id="cfgModel" type="text" placeholder="claude-haiku-4-5-20251001"/></label>
+      <input id="cfgModel" type="text" placeholder="claude-sonnet-4-6"/></label>
     <div class="row"><button class="save" id="cfgSave">Save</button></div>
     <div class="hint">Test mode calls Claude directly from your browser using your key — fine for your own testing, not for a public page. For the Zoomr site, deploy the included proxy and put its URL in “Backend endpoint” (then no key lives in the browser).</div>
   </div>
   <div class="chat-body" id="chatBody"></div>
   <div class="chips" id="chips"></div>
-  <div class="chat-input"><input id="chatInput" placeholder="Ask anything about the city…" autocomplete="off"/><button id="sendBtn">Send</button></div>
+  <div class="chat-input"><button id="micBtn" class="mic" title="Tap to speak">🎤</button><input id="chatInput" placeholder="Ask anything about the city…" autocomplete="off"/><button id="sendBtn">Send</button></div>
+  <div class="vhint">🎙 Tap the mic for a spoken conversation. Best used while stopped · Chrome/Android.</div>
 </div></div>
 <div class="demo-note">PROTOTYPE · sample content</div>
 
@@ -594,13 +599,13 @@ const fmt=m=> m<1000 ? Math.round(m/5)*5+' m' : (m/1000).toFixed(1)+' km';
 let statusTimer=null;
 function setStatus(t,warn,autohide){clearTimeout(statusTimer);statusEl.style.display='block';statusEl.textContent=t;statusEl.classList.toggle('warn',!!warn);if(autohide)statusTimer=setTimeout(()=>{statusEl.style.display='none';},5000);}
 let speechQ=[], speaking=false;
-function speak(t,type){ if(!voiceOn||!('speechSynthesis'in window)||!t)return;
+function speak(t,type,force){ if((!voiceOn&&!force)||!('speechSynthesis'in window)||!t)return;
   const item={t,type:type||'normal'};
   if(type==='turn'){ let i=0; while(i<speechQ.length && speechQ[i].type==='turn') i++; speechQ.splice(i,0,item); }  // turns jump ahead of queued stop blurbs
   else speechQ.push(item);
   pumpSpeech();
 }
-function pumpSpeech(){ if(speaking||!speechQ.length||!voiceOn) return; const it=speechQ.shift(); speaking=true;
+function pumpSpeech(){ if(speaking||!speechQ.length) return; const it=speechQ.shift(); speaking=true;
   try{ const u=new SpeechSynthesisUtterance(it.t); u.rate=1; u.pitch=1; u.onend=()=>{ speaking=false; pumpSpeech(); }; u.onerror=()=>{ speaking=false; pumpSpeech(); }; speechSynthesis.speak(u); }
   catch(e){ speaking=false; }
 }
@@ -637,7 +642,7 @@ function arrive(p){
 async function speakArrival(p){
   const oi=order[p], key=DATA.id+'|'+oi, s=stopAt(p);
   let text=narrationCache[key]||s.desc;
-  if(aiMode()!=='off' && !narrationCache[key]){
+  if(aiMode()!=='off' && getCfg().liveNarration && !narrationCache[key]){
     try{ text=await claudeRequest(narrationSystem(),[{role:'user',content:narrationUser(p)}],240); narrationCache[key]=text; if(cur===p) $('desc').textContent=text; }catch(e){}
   }
   if(voiceOn){
@@ -986,7 +991,7 @@ async function refreshNarration(){
   if(!order.length) return;
   const p=cur, oi=order[p], key=DATA.id+'|'+oi, s=stopAt(p);
   if(narrationCache[key]){ $('desc').textContent=narrationCache[key]; if(voiceOn) speak(narrationCache[key]); return; }
-  if(aiMode()==='off'){ $('desc').textContent=s.desc; if(voiceOn) speak(s.desc); return; }   // canned: read the stop info
+  if(aiMode()==='off' || !getCfg().liveNarration){ $('desc').textContent=s.desc; if(voiceOn) speak(s.desc); return; }   // scripted narration (recommended)
   $('desc').textContent=s.desc;                              // baseline while generating
   const myTour=DATA;
   try{
@@ -999,8 +1004,8 @@ async function refreshNarration(){
 /* ---------- Ask the Guide (live Claude) ---------- */
 const modal=$('modal'),body=$('chatBody');
 let chatHistory=[];      // {role,content} for the current tour conversation
-const DEFAULT_MODEL='claude-haiku-4-5-20251001';
-const AI_ENABLED=false;  // canned answers for now — flip to true (and set key/endpoint) to enable live Claude later
+const DEFAULT_MODEL='claude-sonnet-4-6';
+const AI_ENABLED=true;   // live 'Ask the Guide' via the proxy/key; scripted turns & narration stay deterministic
 
 /* config persisted locally in the browser */
 function getCfg(){ try{return JSON.parse(localStorage.getItem('zoomrAI')||'{}');}catch(e){return {};} }
@@ -1061,10 +1066,10 @@ async function claudeRequest(system, messages, maxTokens){
   return (data.content&&data.content[0]&&data.content[0].text)|| data.text || '(no answer)';
 }
 
-async function send(q){
+async function send(q,viaVoice){
   if(!q.trim()) return;
   addMsg(q,'me');
-  if(aiMode()==='off'){ addMsg(offlineAnswer(q),'bot'); return; }
+  if(aiMode()==='off'){ const a=offlineAnswer(q); addMsg(a,'bot'); if(viaVoice) speak(a,'stop',true); else if(voiceOn) speak(a,'stop'); return; }
   chatHistory.push({role:'user',content:q});
   const sendBtn=$('sendBtn'); sendBtn.disabled=true;
   const typing=addTyping();
@@ -1072,6 +1077,7 @@ async function send(q){
     const text=await claudeRequest(buildSystemPrompt(), chatHistory, 500);
     typing.remove();
     addMsg(text,'bot');
+    if(viaVoice) speak(text,'stop',true); else if(voiceOn) speak(text,'stop');
     chatHistory.push({role:'assistant',content:text});
     if(chatHistory.length>16) chatHistory=chatHistory.slice(-16); // keep context bounded
   }catch(err){
@@ -1095,6 +1101,24 @@ modal.onclick=e=>{if(e.target===modal)modal.classList.remove('open');};
 $('sendBtn').onclick=()=>{const v=$('chatInput').value;$('chatInput').value='';send(v);};
 $('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=e.target.value;e.target.value='';send(v);}});
 ["Where can I eat?","Will I see any wildlife?","How long does it take?","Where are washrooms?"].forEach(c=>{const b=document.createElement('button');b.className='chip';b.textContent=c;b.onclick=()=>send(c);$('chips').appendChild(b);});
+
+/* ---------- spoken conversation (push-to-talk) ---------- */
+let recog=null, listening=false;
+function srSupported(){ return ('webkitSpeechRecognition'in window)||('SpeechRecognition'in window); }
+function startListen(){
+  const mic=$('micBtn');
+  if(!srSupported()){ openChat(); addMsg('Voice input needs Chrome or an Android browser — you can type your question instead.','bot'); return; }
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  try{ if('speechSynthesis'in window) speechSynthesis.cancel(); }catch(e){}   // don't let it hear the guide talking
+  recog=new SR(); recog.lang='en-CA'; recog.interimResults=false; recog.maxAlternatives=1; recog.continuous=false;
+  listening=true; mic.classList.add('listening'); $('chatInput').placeholder='Listening… speak now';
+  recog.onresult=e=>{ const t=e.results[0][0].transcript; send(t,true); };
+  recog.onerror=ev=>{ if(ev.error==='not-allowed'||ev.error==='service-not-allowed') addMsg('I need mic permission to listen. Enable it in your browser, or just type.','bot'); };
+  recog.onend=()=>{ listening=false; mic.classList.remove('listening'); $('chatInput').placeholder='Ask anything about the city…'; };
+  try{ recog.start(); }catch(e){ listening=false; mic.classList.remove('listening'); }
+}
+function stopListen(){ if(recog&&listening){ try{recog.stop();}catch(e){} } }
+$('micBtn').onclick=()=>{ listening?stopListen():startListen(); };
 
 /* settings panel */
 $('gearBtn').onclick=()=>{ const c=getCfg(); $('cfgKey').value=c.key||''; $('cfgEndpoint').value=c.endpoint||''; $('cfgModel').value=c.model||''; document.getElementById('settings').classList.toggle('open'); };
@@ -1197,9 +1221,14 @@ function initApp(){
 // load editable tour data; fall back to the embedded copy (offline / file://)
 fetch('tours.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{ if(Array.isArray(d)&&d.length){ TOURS=d; DATA=TOURS[0]; } }).catch(()=>{}).finally(initApp);
 // Test-bench (admin only): receive previewed data + simulation commands via postMessage
-let simTimer=null, simDist=0, simSpeedKmh=20, simLastPos=null;
+let simTimer=null, simDist=0, simSpeedKmh=20, simLastPos=null, simTotal=0;
 function simPosAt(dist){ const R=DATA.route; let acc=0; for(let i=1;i<R.length;i++){ const d=haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); if(acc+d>=dist){ const t=(dist-acc)/(d||1); return {lat:R[i-1][0]+(R[i][0]-R[i-1][0])*t, lon:R[i-1][1]+(R[i][1]-R[i-1][1])*t, done:false}; } acc+=d; } const last=R[R.length-1]; return {lat:last[0],lon:last[1],done:true}; }
 function simStop(){ if(simTimer){ clearInterval(simTimer); simTimer=null; } }
+function routeLen(R){ let t=0; for(let i=1;i<R.length;i++) t+=haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); return t; }
+function cumDistToIdx(idx){ const R=DATA.route; let t=0; for(let i=1;i<=idx && i<R.length;i++) t+=haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); return t; }
+function reportSim(){ try{ parent.postMessage({zoomrSimAt:simDist, zoomrSimTotal:simTotal, zoomrSimPos:nextStop}, '*'); }catch(e){} }
+function simSeek(dist){ if(!DATA||!DATA.route) return; if(!touring) beginTour(); simDist=Math.max(0,Math.min(dist, simTotal||dist)); simLastPos=null; const p=simPosAt(simDist); updatePosition(p.lat,p.lon,6); reportSim(); }
+function simJump(pos){ if(!DATA||!order.length) return; if(!touring) beginTour(); const p=Math.max(0,Math.min(pos|0, order.length-1)); reached=new Set(); for(let k=0;k<p;k++) reached.add(k); nextStop=p; phase='enroute'; const s=stopAt(p); simDist=cumDistToIdx(nearestRouteIdx(s.lat,s.lon)); simLastPos=null; updatePosition(s.lat,s.lon,6); reportSim(); }
 function simTick(){
   if(!DATA||!DATA.route) return;
   simDist += (simSpeedKmh/3.6)*0.1;                 // metres advanced this 100ms tick
@@ -1207,16 +1236,17 @@ function simTick(){
   if(simLastPos){ const b=bearing(simLastPos,[p.lat,p.lon]); gpsHeading=b; lastSpeed=simSpeedKmh/3.6; setMoving(lastSpeed); pushHeading(b,0.6); }
   simLastPos=[p.lat,p.lon];
   updatePosition(p.lat,p.lon,6);
+  reportSim();
   if(p.done) simStop();
 }
 function simStart(idx, speed){
   simStop(); simSpeedKmh=speed||20;
   if(watchId!=null){ try{navigator.geolocation.clearWatch(watchId);}catch(e){} watchId=null; }  // no real GPS during sim
   loadTour(idx||0);
-  touring=true; previewing=false; headingToStart=false; returningToHub=false; phase='enroute';
-  reached=new Set(); nextStop=0; skipping=false; rotateOn=true; follow=true; resetManeuvers();
-  simDist=0; simLastPos=null;
+  simTotal=routeLen(DATA.route); simDist=0; simLastPos=null;
+  beginTour();                       // behaves exactly like tapping "Start tour" — live ride UI + arrival narration
   simTimer=setInterval(simTick,100);
+  reportSim();
 }
 window.addEventListener('message',function(e){ const d=e&&e.data; if(!d) return;
   if(d.zoomrPreview && Array.isArray(d.zoomrTours) && d.zoomrTours.length){ window.__zoomrPreview=true; simStop(); TOURS=d.zoomrTours; DATA=TOURS[0]; TOURS.forEach(t=>t._man=null); try{showPicker();}catch(_){ } initApp(); return; }
@@ -1225,6 +1255,8 @@ window.addEventListener('message',function(e){ const d=e&&e.data; if(!d) return;
     else if(d.zoomrSim==='speed') simSpeedKmh=d.speed||20;
     else if(d.zoomrSim==='pause'){ if(simTimer){ clearInterval(simTimer); simTimer=null; } }
     else if(d.zoomrSim==='resume'){ if(!simTimer && DATA && DATA.route){ simTimer=setInterval(simTick,100); } }
+    else if(d.zoomrSim==='seek') simSeek(d.dist);
+    else if(d.zoomrSim==='jump') simJump(d.pos);
     else if(d.zoomrSim==='stop') simStop();
   }
 });
