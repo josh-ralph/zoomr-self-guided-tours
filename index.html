@@ -587,7 +587,23 @@ const statusEl=document.getElementById('status');
 const fmt=m=> m<1000 ? Math.round(m/5)*5+' m' : (m/1000).toFixed(1)+' km';
 let statusTimer=null;
 function setStatus(t,warn,autohide){clearTimeout(statusTimer);statusEl.style.display='block';statusEl.textContent=t;statusEl.classList.toggle('warn',!!warn);if(autohide)statusTimer=setTimeout(()=>{statusEl.style.display='none';},5000);}
-let speechQ=[], speaking=false;
+let speechQ=[], speaking=false, preferredVoice=null;
+function pickVoice(){
+  if(!('speechSynthesis'in window)) return;
+  const vs=speechSynthesis.getVoices(); if(!vs||!vs.length) return;
+  const en=vs.filter(v=>/^en(\b|[-_])/i.test(v.lang||'')); const pool=en.length?en:vs;
+  if(GUIDE_VOICE){ const m=pool.find(v=>(v.name||'').toLowerCase().includes(GUIDE_VOICE.toLowerCase())); if(m){ preferredVoice=m; return; } }
+  const score=v=>{ const n=(v.name||'').toLowerCase(); let s=0;
+    if(/natural|neural|premium|enhanced/.test(n)) s+=8;
+    if(/google/.test(n)) s+=5;
+    if(/\b(samantha|ava|allison|serena|zoe|jenny|aria|nova|siri|joelle|nathan|evan)\b/.test(n)) s+=3;
+    if(v.localService===false) s+=2;                                  // network voices are usually nicer
+    if(/en[-_]?(us|gb|ca|au)/i.test(v.lang||'')) s+=1;
+    if(/compact|eloquence|fred|albert|zarvox|whisper|novelty|grandma|grandpa|junior|organ|cellos|bells|trinoids|robot|bad news|good news/.test(n)) s-=8;
+    return s; };
+  pool.sort((a,b)=>score(b)-score(a)); preferredVoice=pool[0]||null;
+}
+if('speechSynthesis'in window){ try{ pickVoice(); speechSynthesis.onvoiceschanged=pickVoice; }catch(e){} }
 function speak(t,type,force){ if((!voiceOn&&!force)||!('speechSynthesis'in window)||!t)return;
   const item={t,type:type||'normal'};
   if(type==='turn'){ let i=0; while(i<speechQ.length && speechQ[i].type==='turn') i++; speechQ.splice(i,0,item); }  // turns jump ahead of queued stop blurbs
@@ -595,7 +611,7 @@ function speak(t,type,force){ if((!voiceOn&&!force)||!('speechSynthesis'in windo
   pumpSpeech();
 }
 function pumpSpeech(){ if(speaking||!speechQ.length) return; const it=speechQ.shift(); speaking=true;
-  try{ const u=new SpeechSynthesisUtterance(it.t); u.rate=1; u.pitch=1; u.onend=()=>{ speaking=false; pumpSpeech(); }; u.onerror=()=>{ speaking=false; pumpSpeech(); }; speechSynthesis.speak(u); }
+  try{ const u=new SpeechSynthesisUtterance(it.t); if(!preferredVoice) pickVoice(); if(preferredVoice){ u.voice=preferredVoice; u.lang=preferredVoice.lang||'en-US'; } u.rate=GUIDE_RATE||1; u.pitch=1.0; u.onend=()=>{ speaking=false; pumpSpeech(); }; u.onerror=()=>{ speaking=false; pumpSpeech(); }; speechSynthesis.speak(u); }
   catch(e){ speaking=false; }
 }
 function stopSpeech(){ speechQ=[]; speaking=false; if('speechSynthesis'in window) speechSynthesis.cancel(); }
@@ -998,7 +1014,8 @@ const AI_ENABLED=true;   // live 'Ask the Guide'; scripted turns & narration sta
 let GUIDE_ENDPOINT='https://zoomr-guide.zoomr-ca.workers.dev';   // Cloudflare worker proxy URL (not secret)
 let GUIDE_MODEL='claude-sonnet-4-6';
 let GUIDE_LIVE_NARRATION=false;                                  // keep stop narration scripted by default
-function applyGuideConfig(cfg){ const g=cfg&&cfg.guide; if(!g) return; if(g.endpoint!=null) GUIDE_ENDPOINT=g.endpoint; if(g.model) GUIDE_MODEL=g.model; if(g.liveNarration!=null) GUIDE_LIVE_NARRATION=!!g.liveNarration; }
+let GUIDE_RATE=1.0, GUIDE_VOICE='';                              // speaking speed + optional preferred voice name
+function applyGuideConfig(cfg){ const g=cfg&&cfg.guide; if(!g) return; if(g.endpoint!=null) GUIDE_ENDPOINT=g.endpoint; if(g.model) GUIDE_MODEL=g.model; if(g.liveNarration!=null) GUIDE_LIVE_NARRATION=!!g.liveNarration; if(g.rate) GUIDE_RATE=+g.rate||1; if(g.voice!=null) GUIDE_VOICE=g.voice; try{ pickVoice(); }catch(e){} }
 
 /* config persisted locally in the browser */
 function getCfg(){ try{return JSON.parse(localStorage.getItem('zoomrAI')||'{}');}catch(e){return {};} }
