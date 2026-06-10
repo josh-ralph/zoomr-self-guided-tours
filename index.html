@@ -296,16 +296,7 @@
 <div class="modal" id="modal"><div class="chat">
   <div class="chat-head"><div style="font-size:22px">🧭</div>
     <div style="flex:1"><div class="ttl">Ask the Guide</div><div class="sub" id="chatSub">Powered by Claude · <span id="modeBadge" class="badge off">offline</span></div></div>
-    <button class="gear" id="gearBtn" title="AI settings">⚙</button>
     <button class="chat-x" id="chatX">×</button></div>
-  <div class="settings" id="settings">
-    <label>Anthropic API key (test mode — stays in your browser)
-      <input id="cfgKey" type="password" placeholder="sk-ant-..." autocomplete="off"/></label>
-    <label>Backend endpoint (optional — for the live site, leave key blank)
-      <input id="cfgEndpoint" type="text" placeholder="https://your-worker.workers.dev" autocomplete="off"/></label>
-    <label>Model
-      <input id="cfgModel" type="text" placeholder="claude-sonnet-4-6"/></label>
-    <div class="row"><button class="save" id="cfgSave">Save</button></div>
     <div class="hint">Test mode calls Claude directly from your browser using your key — fine for your own testing, not for a public page. For the Zoomr site, deploy the included proxy and put its URL in “Backend endpoint” (then no key lives in the browser).</div>
   </div>
   <div class="chat-body" id="chatBody"></div>
@@ -642,7 +633,7 @@ function arrive(p){
 async function speakArrival(p){
   const oi=order[p], key=DATA.id+'|'+oi, s=stopAt(p);
   let text=narrationCache[key]||s.desc;
-  if(aiMode()!=='off' && getCfg().liveNarration && !narrationCache[key]){
+  if(aiMode()!=='off' && GUIDE_LIVE_NARRATION && !narrationCache[key]){
     try{ text=await claudeRequest(narrationSystem(),[{role:'user',content:narrationUser(p)}],240); narrationCache[key]=text; if(cur===p) $('desc').textContent=text; }catch(e){}
   }
   if(voiceOn){
@@ -991,7 +982,7 @@ async function refreshNarration(){
   if(!order.length) return;
   const p=cur, oi=order[p], key=DATA.id+'|'+oi, s=stopAt(p);
   if(narrationCache[key]){ $('desc').textContent=narrationCache[key]; if(voiceOn) speak(narrationCache[key]); return; }
-  if(aiMode()==='off' || !getCfg().liveNarration){ $('desc').textContent=s.desc; if(voiceOn) speak(s.desc); return; }   // scripted narration (recommended)
+  if(aiMode()==='off' || !GUIDE_LIVE_NARRATION){ $('desc').textContent=s.desc; if(voiceOn) speak(s.desc); return; }   // scripted narration (recommended)
   $('desc').textContent=s.desc;                              // baseline while generating
   const myTour=DATA;
   try{
@@ -1004,19 +995,20 @@ async function refreshNarration(){
 /* ---------- Ask the Guide (live Claude) ---------- */
 const modal=$('modal'),body=$('chatBody');
 let chatHistory=[];      // {role,content} for the current tour conversation
-const DEFAULT_MODEL='claude-sonnet-4-6';
-const AI_ENABLED=true;   // live 'Ask the Guide' via the proxy/key; scripted turns & narration stay deterministic
+const AI_ENABLED=true;   // live 'Ask the Guide'; scripted turns & narration stay deterministic
+/* Guide config — operator-controlled. Baked default below; admin can override via tours.json. Riders never edit this. */
+let GUIDE_ENDPOINT='https://zoomr-guide.zoomr-ca.workers.dev';   // Cloudflare worker proxy URL (not secret)
+let GUIDE_MODEL='claude-sonnet-4-6';
+let GUIDE_LIVE_NARRATION=false;                                  // keep stop narration scripted by default
+function applyGuideConfig(cfg){ const g=cfg&&cfg.guide; if(!g) return; if(g.endpoint!=null) GUIDE_ENDPOINT=g.endpoint; if(g.model) GUIDE_MODEL=g.model; if(g.liveNarration!=null) GUIDE_LIVE_NARRATION=!!g.liveNarration; }
 
 /* config persisted locally in the browser */
 function getCfg(){ try{return JSON.parse(localStorage.getItem('zoomrAI')||'{}');}catch(e){return {};} }
 function setCfg(c){ try{localStorage.setItem('zoomrAI',JSON.stringify(c));}catch(e){} }
-function aiMode(){ if(!AI_ENABLED) return 'off'; const c=getCfg(); if(c.endpoint) return 'proxy'; if(c.key) return 'direct'; return 'off'; }
+function aiMode(){ return (AI_ENABLED && GUIDE_ENDPOINT) ? 'proxy' : 'off'; }
 function refreshBadge(){
-  const gear=document.getElementById('gearBtn'), sub=document.getElementById('chatSub');
-  if(!AI_ENABLED){ if(gear) gear.style.display='none'; sub.textContent='Your Victoria guide'; return; }
-  const m=aiMode(), b=document.getElementById('modeBadge');
-  if(m==='proxy'){ b.className='badge live'; b.textContent='live · backend'; }
-  else if(m==='direct'){ b.className='badge live'; b.textContent='live · test key'; }
+  const b=document.getElementById('modeBadge'); if(!b) return;
+  if(aiMode()==='proxy'){ b.className='badge live'; b.textContent='live'; }
   else { b.className='badge off'; b.textContent='offline'; }
 }
 
@@ -1026,6 +1018,14 @@ function addTyping(){const d=document.createElement('div');d.className='msg bot'
 
 /* build a tour-grounded system prompt */
 function buildSystemPrompt(){
+  // Tour-picker (no tour started yet): help the rider choose from all tours
+  if(!inTour()){
+    const list=TOURS.map(t=>`• ${t.tour.name} — ${t.km} km, about ${t.dur}. ${t.blurb||''}`).join('\n');
+    return `You are the Zoomr virtual guide for self-guided e-scooter tours in ${TOURS[0]?TOURS[0].tour.city:'Victoria, BC'}. `
+      +`The rider hasn't chosen a tour yet — help them pick. Be warm and concise (2-4 sentences). `
+      +`If they ask which is most relaxed, scenic, family-friendly, shortest, etc., recommend one of these and say why briefly. `
+      +`Don't invent tours beyond this list.\n\nAVAILABLE TOURS:\n${list}`;
+  }
   const stops=order.map((oi,p)=>`${p+1}. ${DATA.stops[oi].name} — ${DATA.stops[oi].desc}`).join('\n');
   const here=stopAt(cur);
   return `You are the Zoomr virtual tour guide for the self-guided e-scooter tour "${DATA.tour.name}" in ${DATA.tour.city}. `
@@ -1034,7 +1034,7 @@ function buildSystemPrompt(){
     +`If asked about live specifics you can't be sure of (current opening hours, prices, today's events), say so briefly and suggest they verify. `
     +`Stay friendly and on-topic for a city e-scooter tour.\n\n`
     +`TOUR STOPS (in order):\n${stops}\n\n`
-    +`The rider is currently at stop ${cur+1}: ${here.name}. Tour length: ${DATA.km} km, about ${DATA.dur}.`;
+    +`The rider is currently at stop ${(cur|0)+1}: ${here&&here.name?here.name:'the start'}. Tour length: ${DATA.km} km, about ${DATA.dur}.`;
 }
 
 /* offline fallback (keyword match) */
@@ -1045,20 +1045,12 @@ function offlineAnswer(q){const lq=q.toLowerCase();
 
 /* low-level Claude call — direct (browser+key) or via backend proxy. Shared by chat + narration. */
 async function claudeRequest(system, messages, maxTokens){
-  const cfg=getCfg(), model=cfg.model||DEFAULT_MODEL;
-  const payload={model,max_tokens:maxTokens||500,system,messages};
-  let res;
-  if(cfg.endpoint){
-    res=await fetch(cfg.endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
-  }else{
-    res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{
-      'content-type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify(payload)});
-  }
+  const payload={model:GUIDE_MODEL,max_tokens:maxTokens||500,system,messages};
+  const res=await fetch(GUIDE_ENDPOINT,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
   if(!res.ok){
-    let msg='Request failed ('+res.status+').';
-    if(res.status===401) msg='That API key was rejected. Check it in ⚙ settings.';
-    else if(res.status===429) msg='Rate limited — give it a moment and try again.';
+    let msg='The guide had a problem ('+res.status+').';
+    if(res.status===429) msg='The guide is busy right now — give it a moment and try again.';
+    else if(res.status===401||res.status===403) msg='The guide service is temporarily unavailable.';
     else { try{const e=await res.json(); if(e.error&&e.error.message) msg=e.error.message;}catch(_){} }
     throw new Error(msg);
   }
@@ -1120,13 +1112,6 @@ function startListen(){
 function stopListen(){ if(recog&&listening){ try{recog.stop();}catch(e){} } }
 $('micBtn').onclick=()=>{ listening?stopListen():startListen(); };
 
-/* settings panel */
-$('gearBtn').onclick=()=>{ const c=getCfg(); $('cfgKey').value=c.key||''; $('cfgEndpoint').value=c.endpoint||''; $('cfgModel').value=c.model||''; document.getElementById('settings').classList.toggle('open'); };
-$('cfgSave').onclick=()=>{
-  setCfg({ key:$('cfgKey').value.trim(), endpoint:$('cfgEndpoint').value.trim(), model:$('cfgModel').value.trim() });
-  document.getElementById('settings').classList.remove('open'); refreshBadge();
-  addMsg(aiMode()==='off'?'Saved. Add a key or backend endpoint to go live.':'Live AI guide enabled. Ask me anything!','bot');
-};
 refreshBadge();
 
 /* ---------- tour picker + loading ---------- */
@@ -1219,7 +1204,7 @@ function initApp(){
   setTimeout(startPrefetch, 1200);           // prefetch street names + warm map tiles for all routes
 }
 // load editable tour data; fall back to the embedded copy (offline / file://)
-fetch('tours.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{ if(Array.isArray(d)&&d.length){ TOURS=d; DATA=TOURS[0]; } }).catch(()=>{}).finally(initApp);
+fetch('tours.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{ const arr=Array.isArray(d)?d:(d&&Array.isArray(d.tours)?d.tours:null); if(arr&&arr.length){ TOURS=arr; DATA=TOURS[0]; } if(d&&!Array.isArray(d)&&d.config) applyGuideConfig(d.config); }).catch(()=>{}).finally(initApp);
 // Test-bench (admin only): receive previewed data + simulation commands via postMessage
 let simTimer=null, simDist=0, simSpeedKmh=20, simLastPos=null, simTotal=0;
 function simPosAt(dist){ const R=DATA.route; let acc=0; for(let i=1;i<R.length;i++){ const d=haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); if(acc+d>=dist){ const t=(dist-acc)/(d||1); return {lat:R[i-1][0]+(R[i][0]-R[i-1][0])*t, lon:R[i-1][1]+(R[i][1]-R[i-1][1])*t, done:false}; } acc+=d; } const last=R[R.length-1]; return {lat:last[0],lon:last[1],done:true}; }
@@ -1249,7 +1234,7 @@ function simStart(idx, speed){
   reportSim();
 }
 window.addEventListener('message',function(e){ const d=e&&e.data; if(!d) return;
-  if(d.zoomrPreview && Array.isArray(d.zoomrTours) && d.zoomrTours.length){ window.__zoomrPreview=true; simStop(); TOURS=d.zoomrTours; DATA=TOURS[0]; TOURS.forEach(t=>t._man=null); try{showPicker();}catch(_){ } initApp(); return; }
+  if(d.zoomrPreview && Array.isArray(d.zoomrTours) && d.zoomrTours.length){ window.__zoomrPreview=true; simStop(); TOURS=d.zoomrTours; DATA=TOURS[0]; if(d.zoomrGuide) applyGuideConfig({guide:d.zoomrGuide}); TOURS.forEach(t=>t._man=null); try{showPicker();}catch(_){ } initApp(); return; }
   if(d.zoomrSim && window.__zoomrPreview){
     if(d.zoomrSim==='start') simStart(d.idx||0, d.speed||20);
     else if(d.zoomrSim==='speed') simSpeedKmh=d.speed||20;
