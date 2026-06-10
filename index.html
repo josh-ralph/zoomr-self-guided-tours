@@ -1036,7 +1036,7 @@ let GUIDE_MODEL='claude-sonnet-4-6';
 let GUIDE_LIVE_NARRATION=false;                                  // keep stop narration scripted by default
 let GUIDE_RATE=1.0, GUIDE_VOICE='';                              // speaking speed + optional preferred voice name
 let GUIDE_KNOWLEDGE='';                                          // operator-curated facts the guide can use
-function applyBrandLogo(logo,dark){ ['logoImg','logoImgP'].forEach(id=>{ const el=document.getElementById(id); if(!el) return; if(logo){ el.src=logo; el.style.display='block'; } el.classList.toggle('chip', !!dark); }); if(logo){ const s1=document.getElementById('logoSvg'),s2=document.getElementById('logoSvgP'); if(s1)s1.style.display='none'; if(s2)s2.style.display='none'; } }
+function applyBrandLogo(logo,dark){ ['logoImg','logoImgP'].forEach(id=>{ const el=document.getElementById(id); if(!el) return; if(logo){ el.src=logo; el.style.display='inline-block'; } el.classList.toggle('chip', !!dark); }); if(logo){ const s1=document.getElementById('logoSvg'),s2=document.getElementById('logoSvgP'); if(s1)s1.style.display='none'; if(s2)s2.style.display='none'; } }
 function applyGuideConfig(cfg){ if(!cfg) return; const g=cfg.guide;
   if(g){ if(g.endpoint!=null) GUIDE_ENDPOINT=g.endpoint; if(g.model) GUIDE_MODEL=g.model; if(g.liveNarration!=null) GUIDE_LIVE_NARRATION=!!g.liveNarration; if(g.rate) GUIDE_RATE=+g.rate||1; if(g.voice!=null) GUIDE_VOICE=g.voice; if(g.knowledge!=null) GUIDE_KNOWLEDGE=g.knowledge; try{ pickVoice(); }catch(e){} }
   if(cfg.logo!=null || cfg.logoDark!=null) applyBrandLogo(cfg.logo, cfg.logoDark);
