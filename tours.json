@@ -2154,7 +2154,7 @@
           "name": "Clover Point",
           "lat": 48.403373,
           "lon": -123.349462,
-          "emoji": "🌊",
+          "emoji": "🪂",
           "tagline": "Windswept point jutting into the strait",
           "desc": "Clover Point pushes out into Juan de Fuca Strait, a favourite for kite-flying, whale-spotting, and watching cargo ships drift past. On a clear day Washington's Olympic Range looks close enough to touch.",
           "tip": "Pause at the tip — grey whales and orcas are sometimes spotted offshore in spring."
@@ -2362,7 +2362,7 @@
     },
     {
       "id": "gorge",
-      "emoji": "🚲",
+      "emoji": "🛤️",
       "color": "#2E7D32",
       "tour": {
         "name": "Gorge & The Goose Loop",
@@ -4643,7 +4643,7 @@
           "name": "Richards Island Viewpoint",
           "lat": 48.44748,
           "lon": -123.431311,
-          "emoji": "🪶",
+          "emoji": "🏝️",
           "tagline": "Tidal inlet & heron habitat",
           "desc": "Richards Island viewpoint looks out over the Gorge Waterway, a tidal inlet that was Victoria's first summer playground. Watch for herons, otters and paddlers.",
           "tip": "Look for the current — the whole inlet is tidal."
@@ -4652,7 +4652,7 @@
           "name": "Gorgeous Gorge",
           "lat": 48.450621,
           "lon": -123.411694,
-          "emoji": "🌀",
+          "emoji": "🏞️",
           "tagline": "Reversing tidal falls",
           "desc": "At Tillicum Narrows the Gorge becomes one of the few reversing tidal falls in the world — the rapids literally flow backwards as the tide turns.",
           "tip": "Time it with the tide change to catch the falls reversing."
@@ -6239,7 +6239,7 @@
           "name": "Fairmont Empress",
           "lat": 48.421739,
           "lon": -123.368645,
-          "emoji": "🏰",
+          "emoji": "🏣",
           "tagline": "Grand 1908 château hotel",
           "desc": "The Fairmont Empress is Victoria's ivy-draped landmark, opened in 1908 and famous for its afternoon tea served to royalty and celebrities alike.",
           "tip": "Best photo is from the Inner Harbour causeway looking up."
