@@ -6233,7 +6233,8 @@
           "emoji": "☕",
           "tagline": "Start & Zoomr Zone",
           "desc": "A ~7.6 km roll through Victoria's grandest heritage architecture — château hotels, parliament, and two genuine castles. Easy rolling pace.",
-          "tip": "Some stops (castle, parliament) have paid tours — check hours if you want to go inside."
+          "tip": "Some stops (castle, parliament) have paid tours — check hours if you want to go inside.",
+          "depart": "When you are ready, head left down Government."
         },
         {
           "name": "Fairmont Empress",
@@ -6242,7 +6243,8 @@
           "emoji": "🏣",
           "tagline": "Grand 1908 château hotel",
           "desc": "The Fairmont Empress is Victoria's ivy-draped landmark, opened in 1908 and famous for its afternoon tea served to royalty and celebrities alike.",
-          "tip": "Best photo is from the Inner Harbour causeway looking up."
+          "tip": "Best photo is from the Inner Harbour causeway looking up.",
+          "depart": "Take in the sights and continue down government when you're ready."
         },
         {
           "name": "Legislative Assembly",
@@ -6251,7 +6253,8 @@
           "emoji": "🏛️",
           "tagline": "BC's seat of government",
           "desc": "The Legislative Assembly (Parliament Buildings) opened in 1898, designed by 25-year-old architect Francis Rattenbury. Over 3,300 lights outline it at night.",
-          "tip": "Free guided tours run inside on weekdays."
+          "tip": "Free guided tours run inside on weekdays.",
+          "depart": "After this stop, lets continue down government towards beacon hill park."
         },
         {
           "name": "Stone Bridge",
@@ -6260,7 +6263,8 @@
           "emoji": "🌉",
           "tagline": "Beacon Hill's storybook crossing",
           "desc": "This picturesque stone bridge arches over the ponds of Beacon Hill Park, laid out in the 1880s in English garden style — a favourite with ducks and photographers.",
-          "tip": "Classic photo spot; watch for turtles on the logs in summer."
+          "tip": "Classic photo spot; watch for turtles on the logs in summer.",
+          "depart": "Take in the sights and continue across the stone bridge."
         },
         {
           "name": "Government House",
@@ -6269,7 +6273,8 @@
           "emoji": "🌹",
           "tagline": "Vice-regal residence & gardens",
           "desc": "Government House is the official residence of BC's Lieutenant Governor. The heritage rose gardens and grounds are open to the public, free of charge.",
-          "tip": "The gardens are free to wander — leave your Zoomr at the rack."
+          "tip": "The gardens are free to wander — leave your Zoomr at the rack.",
+          "depart": "Lets head north to Craigdarroch Castle when you're ready."
         },
         {
           "name": "Craigdarroch Castle",
@@ -6278,7 +6283,8 @@
           "emoji": "🏰",
           "tagline": "A coal baron's bonanza castle",
           "desc": "Craigdarroch Castle is a 39-room stone mansion built in 1890 by coal magnate Robert Dunsmuir. Its woodwork and stained glass are some of the finest in North America.",
-          "tip": "Worth a tour inside for the stained glass and the tower view."
+          "tip": "Worth a tour inside for the stained glass and the tower view.",
+          "depart": "When you are done, head north west up to Fort Street to head back to the Zoomr Zone."
         }
       ],
       "legs": [
