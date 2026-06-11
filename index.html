@@ -260,6 +260,32 @@
   </div>
 </div></div>
 
+<div class="modal" id="welcomeModal"><div class="chat" style="height:auto;max-height:84vh">
+  <div class="chat-head"><div style="font-size:20px">🧭</div>
+    <div style="flex:1"><div class="ttl">Welcome to Zoomr Tours</div><div class="sub">Explore the city on your e-scooter</div></div>
+    <button class="chat-x" id="welcomeX">×</button></div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:13px;font-size:14px;line-height:1.5;color:#3a4150;overflow:auto">
+    <div style="background:#eef9fa;border:1px solid #d8ecff;border-radius:12px;padding:12px 13px">
+      <b>Two apps, two jobs:</b><br>
+      🧭 <b>Zoomr Tours</b> (this app) is your guide — it maps your route, narrates the sights and answers your questions.<br>
+      🛴 <b>Revii</b> controls your scooter — switch back to Revii to <b>pause or end</b> your ride.
+    </div>
+    <div>
+      <b>Getting started</b>
+      <ul style="margin:6px 0 0;padding-left:18px">
+        <li>Pick a tour and tap <b>Start</b> — you will be guided turn by turn.</li>
+        <li>Keep your volume up for the voice guide.</li>
+        <li>Tap <b>Ask the Guide</b> anytime for history, tips or food spots.</li>
+      </ul>
+    </div>
+    <div style="background:#fff7ef;border:1px solid #ffe2c7;border-radius:12px;padding:11px 13px;color:#8a4b12">
+      <b>⚠ Ride safely:</b> obey all traffic laws, stay alert to your surroundings and wear a helmet. This app assists with navigation — you are responsible for riding safely and legally.
+    </div>
+    <div style="font-size:12.5px;color:#7a828f">🔒 Your location is used only on your device to guide you — it is never stored.</div>
+    <button class="btn next" id="welcomeOk" style="width:100%">Let us explore</button>
+  </div>
+</div></div>
+
 <div class="modal" id="endModal"><div class="chat" style="height:auto;max-height:72vh">
   <div class="chat-head"><div style="font-size:20px">🎉</div>
     <div style="flex:1"><div class="ttl">Tour complete!</div><div class="sub">Nice ride</div></div>
@@ -288,7 +314,7 @@
       <button class="gb-close" title="Dismiss">×</button>
     </div>
     <div id="tourCards"></div>
-    <div class="picker-foot">Pick a tour to begin</div>
+    <div class="picker-foot">Pick a tour to begin · <button id="howBtn" style="background:none;border:none;color:#0E5C66;font-weight:700;font-size:inherit;cursor:pointer;text-decoration:underline;padding:0">How it works</button></div>
     <div id="devTools" style="display:none;text-align:center;margin-top:8px"><input type="file" id="devLoad" accept=".json,application/json" style="display:none"><button id="devLoadBtn" style="background:none;border:none;color:#9aa3af;font-size:11px;text-decoration:underline;cursor:pointer">Load tours.json (local testing)</button> <span id="devLoadMsg" style="font-size:11px;color:#10b981"></span></div>
   </div>
   <button class="ai-fab-picker" id="askBtnPicker">💬 Ask the Guide</button>
@@ -841,7 +867,6 @@ function beginTour(){
   if(riderHeading!=null) mapHeading=riderHeading;
   resetManeuvers();
   if(me){ arrive(0); } else { cur=0; renderPanel(); }
-  if(!reviiSeen){ reviiSeen=true; document.getElementById('reviiModal').classList.add('open'); }   // one-time intro
 }
 /* ----- end-of-tour flow ----- */
 function openEndModal(){ document.getElementById('endModal').classList.add('open'); }
@@ -859,6 +884,10 @@ document.getElementById('endTourBtn').onclick=()=>{ closeEnd(); showPicker(); };
 document.getElementById('endNowBtn').onclick=showPicker;
 document.getElementById('endX').onclick=closeEnd;
 document.getElementById('endModal').onclick=e=>{ if(e.target.id==='endModal') closeEnd(); };
+document.getElementById('welcomeOk').onclick=closeWelcome;
+document.getElementById('welcomeX').onclick=closeWelcome;
+document.getElementById('welcomeModal').onclick=e=>{ if(e.target.id==='welcomeModal') closeWelcome(); };
+document.getElementById('howBtn').onclick=showWelcome;
 document.getElementById('reviiOk').onclick=()=>document.getElementById('reviiModal').classList.remove('open');
 document.getElementById('reviiX').onclick=()=>document.getElementById('reviiModal').classList.remove('open');
 document.getElementById('reviiModal').onclick=e=>{ if(e.target.id==='reviiModal') e.currentTarget.classList.remove('open'); };
@@ -1243,7 +1272,11 @@ function initApp(){
   document.getElementById('voiceBtn').classList.toggle('on', voiceOn);   // voice guide on by default
   TOURS.forEach(t=>{ t._man=buildManeuvers(t); loadStreetCacheInto(t._man,t.id); });   // per-tour turn cues (+ overrides)
   setTimeout(startPrefetch, 1200);           // prefetch street names + warm map tiles for all routes
+  if(!window.__zoomrPreview) maybeWelcome();
 }
+function showWelcome(){ document.getElementById('welcomeModal').classList.add('open'); }
+function closeWelcome(){ document.getElementById('welcomeModal').classList.remove('open'); try{ localStorage.setItem('zoomrWelcomed','1'); }catch(e){} }
+function maybeWelcome(){ let seen=false; try{ seen=localStorage.getItem('zoomrWelcomed')==='1'; }catch(e){} if(!seen) showWelcome(); }
 // load editable tour data; fall back to the embedded copy (offline / file://)
 fetch('tours.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{ const arr=Array.isArray(d)?d:(d&&Array.isArray(d.tours)?d.tours:null); if(arr&&arr.length){ TOURS=arr; DATA=TOURS[0]; } if(d&&!Array.isArray(d)&&d.config) applyGuideConfig(d.config); }).catch(()=>{}).finally(initApp);
 // Test-bench (admin only): receive previewed data + simulation commands via postMessage
