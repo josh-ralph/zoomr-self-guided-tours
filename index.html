@@ -260,30 +260,38 @@
   </div>
 </div></div>
 
-<div class="modal" id="welcomeModal"><div class="chat" style="height:auto;max-height:84vh">
-  <div class="chat-head"><div style="font-size:20px">🧭</div>
-    <div style="flex:1"><div class="ttl">Welcome to Zoomr Tours</div><div class="sub">Explore the city on your e-scooter</div></div>
-    <button class="chat-x" id="welcomeX">×</button></div>
-  <div style="padding:16px;display:flex;flex-direction:column;gap:13px;font-size:14px;line-height:1.5;color:#3a4150;overflow:auto">
-    <div style="background:#eef9fa;border:1px solid #d8ecff;border-radius:12px;padding:12px 13px">
-      <b>Two apps, two jobs:</b><br>
-      🧭 <b>Zoomr Tours</b> (this app) is your guide — it maps your route, narrates the sights and answers your questions.<br>
-      🛴 <b>Revii</b> controls your scooter — switch back to Revii to <b>pause or end</b> your ride.
+<div class="modal" id="welcomeModal"><div class="chat" style="height:auto;max-width:360px;width:92%">
+  <style>
+    .wc-head{display:flex;justify-content:flex-end;padding:10px 12px 0}
+    .wc-skip{border:none;background:none;color:#9aa3af;font-size:13px;font-weight:600;cursor:pointer}
+    #wcPages{padding:4px 22px 2px;min-height:212px;display:flex;align-items:center}
+    .wc-page{display:none;text-align:center;width:100%}
+    .wc-page.on{display:block}
+    .wc-ic{font-size:40px;margin:0 0 10px}
+    .wc-page h3{margin:0 0 10px;font-size:19px;color:#1d2230}
+    .wc-page p{margin:0;font-size:14px;line-height:1.55;color:#3a4150}
+    .wc-page p b{color:#1d2230}
+    .wc-dots{display:flex;gap:7px;justify-content:center;padding:8px 0 14px}
+    .wc-dots span{width:8px;height:8px;border-radius:50%;background:#d4dae2;cursor:pointer;transition:background .2s,width .2s}
+    .wc-dots span.on{background:#0E9AA7;width:20px;border-radius:5px}
+  </style>
+  <div class="wc-head"><button class="wc-skip" id="welcomeX">Skip</button></div>
+  <div id="wcPages">
+    <div class="wc-page on">
+      <div class="wc-ic">🧭</div><h3>Two apps, two jobs</h3>
+      <p>🧭 <b>Zoomr Tours</b> (this app) guides your route, narrates the sights and answers your questions.<br><br>🛴 <b>Revii</b> controls your scooter — switch back to Revii to <b>pause or end</b> your ride.</p>
     </div>
-    <div>
-      <b>Getting started</b>
-      <ul style="margin:6px 0 0;padding-left:18px">
-        <li>Pick a tour and tap <b>Start</b> — you will be guided turn by turn.</li>
-        <li>Keep your volume up for the voice guide.</li>
-        <li>Tap <b>Ask the Guide</b> anytime for history, tips or food spots.</li>
-      </ul>
+    <div class="wc-page">
+      <div class="wc-ic">▶️</div><h3>Getting started</h3>
+      <p>Pick a tour and tap <b>Start</b> — you&rsquo;ll be guided turn by turn.<br><br>Keep your volume up for the voice guide, and tap <b>Ask the Guide</b> anytime for tips, history or food.</p>
     </div>
-    <div style="background:#fff7ef;border:1px solid #ffe2c7;border-radius:12px;padding:11px 13px;color:#8a4b12">
-      <b>⚠ Ride safely:</b> obey all traffic laws, stay alert to your surroundings and wear a helmet. This app assists with navigation — you are responsible for riding safely and legally.
+    <div class="wc-page">
+      <div class="wc-ic">⚠️</div><h3>Ride safely</h3>
+      <p>Obey all traffic laws, stay alert and wear a helmet. This app assists with navigation — you&rsquo;re responsible for riding safely.<br><br>🔒 Your location stays on your device — never stored.</p>
     </div>
-    <div style="font-size:12.5px;color:#7a828f">🔒 Your location is used only on your device to guide you — it is never stored.</div>
-    <button class="btn next" id="welcomeOk" style="width:100%">Let us explore</button>
   </div>
+  <div class="wc-dots"><span class="on"></span><span></span><span></span></div>
+  <button class="btn next" id="wcNext" style="width:calc(100% - 32px);margin:0 16px 16px">Next ›</button>
 </div></div>
 
 <div class="modal" id="endModal"><div class="chat" style="height:auto;max-height:72vh">
@@ -884,7 +892,9 @@ document.getElementById('endTourBtn').onclick=()=>{ closeEnd(); showPicker(); };
 document.getElementById('endNowBtn').onclick=showPicker;
 document.getElementById('endX').onclick=closeEnd;
 document.getElementById('endModal').onclick=e=>{ if(e.target.id==='endModal') closeEnd(); };
-document.getElementById('welcomeOk').onclick=closeWelcome;
+document.getElementById('wcNext').onclick=()=>{ const n=document.querySelectorAll('#wcPages .wc-page').length; if(wcPage>=n-1) closeWelcome(); else wcShow(wcPage+1); };
+document.querySelectorAll('.wc-dots span').forEach((d,n)=>d.addEventListener('click',()=>wcShow(n)));
+(function(){ const el=document.getElementById('wcPages'); if(!el)return; let sx=null; el.addEventListener('touchstart',e=>{ sx=e.touches[0].clientX; },{passive:true}); el.addEventListener('touchend',e=>{ if(sx==null)return; const dx=e.changedTouches[0].clientX-sx; if(Math.abs(dx)>40) wcShow(wcPage+(dx<0?1:-1)); sx=null; }); })();
 document.getElementById('welcomeX').onclick=closeWelcome;
 document.getElementById('welcomeModal').onclick=e=>{ if(e.target.id==='welcomeModal') closeWelcome(); };
 document.getElementById('howBtn').onclick=showWelcome;
@@ -1274,7 +1284,9 @@ function initApp(){
   setTimeout(startPrefetch, 1200);           // prefetch street names + warm map tiles for all routes
   if(!window.__zoomrPreview) maybeWelcome();
 }
-function showWelcome(){ document.getElementById('welcomeModal').classList.add('open'); }
+let wcPage=0;
+function wcShow(i){ const pages=document.querySelectorAll('#wcPages .wc-page'), dots=document.querySelectorAll('.wc-dots span'); if(!pages.length)return; wcPage=Math.max(0,Math.min(i,pages.length-1)); pages.forEach((p,n)=>p.classList.toggle('on',n===wcPage)); dots.forEach((d,n)=>d.classList.toggle('on',n===wcPage)); document.getElementById('wcNext').textContent = wcPage===pages.length-1 ? 'Let\u2019s explore' : 'Next \u203a'; }
+function showWelcome(){ wcShow(0); document.getElementById('welcomeModal').classList.add('open'); }
 function closeWelcome(){ document.getElementById('welcomeModal').classList.remove('open'); try{ localStorage.setItem('zoomrWelcomed','1'); }catch(e){} }
 function maybeWelcome(){ let seen=false; try{ seen=localStorage.getItem('zoomrWelcomed')==='1'; }catch(e){} if(!seen) showWelcome(); }
 // load editable tour data; fall back to the embedded copy (offline / file://)
