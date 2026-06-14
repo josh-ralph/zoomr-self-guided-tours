@@ -643,7 +643,6 @@ function sheetH(px){ if(landscapeMode()) return; sheetEl.style.height=Math.round
 function defaultSheet(){ if(landscapeMode()||appEl.clientHeight<=200) return; const nr=document.getElementById('navRow'); if(nr) nr.style.display='flex'; sheetH(appEl.clientHeight*0.46); }   // arrived: show stop info + browse buttons
 function expandSheet(){ defaultSheet(); }
 function collapseSheet(){ if(landscapeMode()) return; const nr=document.getElementById('navRow'); if(nr) nr.style.display='none'; const head=sheetEl.querySelector('.sheet-head'); sheetH((head?head.offsetHeight:30)+8); }   // enroute: maximise map
-defaultSheet();
 
 /* ---------- Live position engine ---------- */
 const ARRIVE=60, OFFROUTE=45;
@@ -1394,6 +1393,7 @@ document.getElementById('backBtn').onclick=showPicker;
 function initApp(){
   buildCards();
   renderPanel();
+  try{ defaultSheet(); }catch(e){}
   document.getElementById('voiceBtn').classList.toggle('on', voiceOn);   // voice guide on by default
   TOURS.forEach(t=>{ t._man=buildManeuvers(t); loadStreetCacheInto(t._man,t.id); });   // per-tour turn cues (+ overrides)
   setTimeout(startPrefetch, 1200);           // prefetch street names + warm map tiles for all routes
