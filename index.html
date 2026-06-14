@@ -61,6 +61,7 @@
     padding:8px 12px;font-size:12.5px;font-weight:700;color:#333;cursor:pointer;display:flex;align-items:center;gap:6px}
   .attr{position:absolute;left:6px;bottom:3px;font-size:9px;color:#5b6472;background:rgba(255,255,255,.7);padding:1px 5px;border-radius:4px;z-index:15}
   .ai-fab{position:absolute;right:12px;bottom:14px;z-index:26;background:var(--ink);color:#fff;border:none;border-radius:999px;padding:11px 15px;font-weight:700;font-size:13.5px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;gap:7px}
+  .btn.endbtn{background:#d64545;color:#fff}
   .reroute-fab{position:absolute;left:50%;transform:translateX(-50%);bottom:70px;z-index:27;background:#e8590c;color:#fff;border:none;border-radius:999px;padding:11px 16px;font-weight:800;font-size:13.5px;box-shadow:var(--shadow);cursor:pointer;display:none;align-items:center;gap:6px}
   .ai-fab-picker{position:fixed;right:16px;bottom:18px;z-index:85;background:var(--ink);color:#fff;border:none;border-radius:999px;padding:13px 18px;font-weight:700;font-size:14px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;gap:7px}
   /* live position */
@@ -220,7 +221,10 @@
     <div class="vgrab" id="vgrab"></div>
     <div class="sheet-head">
       <div class="grab"></div>
-      <div class="navrow" id="navRow"><button class="btn prev" id="prev">‹ Previous Stop</button><button class="btn next" id="next">Next Stop ›</button></div>
+      <div id="headControls">
+        <button class="btn next" id="primaryBtn" style="width:100%;margin-bottom:8px">▶ Start Tour</button>
+        <div class="navrow" id="navRow"><button class="btn prev" id="prev">‹ Previous Stop</button><button class="btn next" id="next">Next Stop ›</button></div>
+      </div>
     </div>
     <div class="sheet-body" id="sheetBody">
       <div class="progwrap">
@@ -237,8 +241,6 @@
       <button class="btn next" id="navHereBtn" style="width:100%;margin-top:12px;display:none">📍 Navigate here</button>
       <div class="revii-tip">🛴 Control your scooter in the <b>Revii app</b> — tap <b>Pause Ride</b> while you explore a stop for a cheaper rate (it locks the scooter until you unpause).</div>
       <div id="startCta">
-        <button class="btn next" id="previewBtn" style="width:100%">▶ Preview tour</button>
-        <button class="btn next" id="startBtn" style="width:100%;margin-top:10px">▶ Start tour</button>
         <button id="manageBtn" class="manage-link">⚙ Manage route</button>
         <div class="start-hint" id="startHint"></div>
       </div>
@@ -632,7 +634,7 @@ vgrabEl.addEventListener('pointerdown',e=>{
 window.addEventListener('pointermove',e=>{
   if(sheetDrag){
     const h=clamp(sheetDrag.h+(sheetDrag.y-e.clientY), 84, appEl.clientHeight*0.8);
-    sheetEl.style.height=h+'px'; const _nr=document.getElementById('navRow'); if(_nr) _nr.style.display=(h>120)?'flex':'none'; render();
+    sheetEl.style.height=h+'px'; const _hc=document.getElementById('headControls'); if(_hc) _hc.style.display=(h>120)?'block':'none'; render();
   } else if(vDrag){
     const w=clamp(vDrag.w+(vDrag.x-e.clientX), 240, appEl.clientWidth*0.6);
     appEl.style.gridTemplateColumns='1fr '+w+'px'; render();
@@ -640,9 +642,9 @@ window.addEventListener('pointermove',e=>{
 });
 window.addEventListener('pointerup',()=>{ sheetDrag=null; vDrag=null; });
 function sheetH(px){ if(landscapeMode()) return; sheetEl.style.height=Math.round(px)+'px'; render(); }
-function defaultSheet(){ if(landscapeMode()||appEl.clientHeight<=200) return; const nr=document.getElementById('navRow'); if(nr) nr.style.display='flex'; sheetH(appEl.clientHeight*0.46); }   // arrived: show stop info + browse buttons
+function defaultSheet(){ if(landscapeMode()||appEl.clientHeight<=200) return; const hc=document.getElementById('headControls'); if(hc) hc.style.display='block'; sheetH(appEl.clientHeight*0.46); }   // arrived: show stop info + buttons
 function expandSheet(){ defaultSheet(); }
-function collapseSheet(){ if(landscapeMode()) return; const nr=document.getElementById('navRow'); if(nr) nr.style.display='none'; const head=sheetEl.querySelector('.sheet-head'); sheetH((head?head.offsetHeight:30)+8); }   // enroute: maximise map
+function collapseSheet(){ if(landscapeMode()) return; const hc=document.getElementById('headControls'); if(hc) hc.style.display='none'; const head=sheetEl.querySelector('.sheet-head'); sheetH((head?head.offsetHeight:30)+8); }   // enroute: maximise map
 
 /* ---------- Live position engine ---------- */
 const ARRIVE=60, OFFROUTE=45;
@@ -966,14 +968,22 @@ function setStartCta(show,mode){
     cta.style.display='none'; arow.style.display='block';
     if(nh) nh.style.display=(touring && !previewing && !returningToHub)?'block':'none';
     document.getElementById('previewEndBtn').style.display = previewing ? 'block' : 'none';
+    updatePrimary();
     return;
   }
   cta.style.display='block'; arow.style.display='none'; if(nh) nh.style.display='none';
-  const btn=document.getElementById('startBtn'), hint=document.getElementById('startHint'),
-        pv=document.getElementById('previewBtn'), s0=stopAt(0).name;
-  if(mode==='heading'){ btn.textContent='Guide me to the start ›'; pv.style.display='none'; hint.textContent='🚶 We’ll guide you to '+s0+' — your tour begins when you arrive.'; }
-  else { btn.textContent='▶ Start tour'; pv.style.display='block'; hint.textContent='Preview the stops, or start and we’ll begin when you reach '+s0+'.'; }
+  const hint=document.getElementById('startHint'), s0=stopAt(0).name;
+  hint.textContent = (mode==='heading') ? ('🚶 We’ll guide you to '+s0+' — your tour begins when you arrive.')
+                                        : ('Browse the stops with ‹ ›, then tap Start Tour — we’ll begin when you reach '+s0+'.');
+  updatePrimary();
 }
+function updatePrimary(){
+  const b=document.getElementById('primaryBtn'); if(!b) return;
+  if(touring || returningToHub){ b.textContent='✕ End Tour'; b.classList.add('endbtn'); }
+  else if(headingToStart){ b.textContent='Guide me to the start ›'; b.classList.remove('endbtn'); }
+  else { b.textContent='▶ Start Tour'; b.classList.remove('endbtn'); }
+}
+function endTourNow(){ if(confirm('End the tour and return to the tour list?')){ clearLive(); showPicker(); } }
 function beginTour(){
   touring=true; headingToStart=false; previewing=false; returningToHub=false; setStartCta(false);
   reached=new Set(); nextStop=0; skipping=false;
@@ -1034,7 +1044,11 @@ function startTour(){
   headingToStart=true; follow=true; rotateOn=true; state.z=Math.max(state.z,16); setStartCta(true,'heading');
   setStatus(me ? '🚶 Head to start: '+s0.name+' · '+fmt(haversine(me.lat,me.lon,s0.lat,s0.lon)) : 'Locating you…');
 }
-document.getElementById('startBtn').onclick=()=>{ headingToStart ? beginTour() : startTour(); };
+document.getElementById('primaryBtn').onclick=()=>{
+  if(touring || returningToHub){ endTourNow(); }
+  else if(headingToStart){ beginTour(); }
+  else { startTour(); }
+};
 document.getElementById('skipWarnGo').onclick=()=>{ document.getElementById('skipWarnModal').classList.remove('open'); doNavigate(pendingNav); };
 document.getElementById('skipWarnCancel').onclick=()=>document.getElementById('skipWarnModal').classList.remove('open');
 document.getElementById('skipWarnModal').onclick=e=>{ if(e.target.id==='skipWarnModal') e.currentTarget.classList.remove('open'); };
@@ -1119,7 +1133,6 @@ function locateMe(){
   else setStatus('Locating…');
 }
 
-document.getElementById('previewBtn').onclick=enterPreview;
 document.getElementById('previewEndBtn').onclick=exitPreview;
 document.getElementById('gpsBtn').onclick=locateMe;
 document.getElementById('voiceBtn').onclick=function(){ voiceOn=!voiceOn; this.classList.toggle('on',voiceOn); if(voiceOn){speak('Voice guide on.');} else stopSpeech(); };
@@ -1139,7 +1152,7 @@ function renderPanel(){
   $('progtxt').textContent = isHub ? '🏁 Start / Finish Zone' : `Stop ${cur+1} of ${N}`;
   $('progfill').style.width=(N>1?cur/(N-1)*100:0)+'%';
   $('prev').disabled=cur===0; $('next').disabled=cur===N-1;
-  const nh=$('navHereBtn'); if(nh){ const isTarget=(touring && !previewing && cur===nextStop && phase!=='atstop'); nh.disabled=isTarget; nh.textContent=isTarget?'✓ Navigating here':'📍 Navigate here'; nh.style.display=(touring && !previewing && !returningToHub)?'block':'none'; }
+  const nh=$('navHereBtn'); if(nh){ const isTarget=(touring && !previewing && cur===nextStop && phase!=='atstop'); nh.disabled=isTarget; nh.textContent=isTarget?'✓ Navigating here':'📍 Navigate here'; nh.style.display=(touring && !previewing && !returningToHub)?'block':'none'; } updatePrimary();
 }
 function goTo(i){cur=Math.max(0,Math.min(order.length-1,i));renderPanel(); if(previewing) refreshNarration();
   const s=stopAt(cur); if(!follow){ state.z=Math.max(state.z,16); panToLatLon(s.lat,s.lon); } }
