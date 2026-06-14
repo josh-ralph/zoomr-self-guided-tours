@@ -61,6 +61,7 @@
     padding:8px 12px;font-size:12.5px;font-weight:700;color:#333;cursor:pointer;display:flex;align-items:center;gap:6px}
   .attr{position:absolute;left:6px;bottom:3px;font-size:9px;color:#5b6472;background:rgba(255,255,255,.7);padding:1px 5px;border-radius:4px;z-index:15}
   .ai-fab{position:absolute;right:12px;bottom:14px;z-index:26;background:var(--ink);color:#fff;border:none;border-radius:999px;padding:11px 15px;font-weight:700;font-size:13.5px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;gap:7px}
+  .reroute-fab{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;z-index:27;background:#e8590c;color:#fff;border:none;border-radius:999px;padding:11px 16px;font-weight:800;font-size:13.5px;box-shadow:var(--shadow);cursor:pointer;display:none;align-items:center;gap:6px}
   .ai-fab-picker{position:fixed;right:16px;bottom:18px;z-index:85;background:var(--ink);color:#fff;border:none;border-radius:999px;padding:13px 18px;font-weight:700;font-size:14px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;gap:7px}
   /* live position */
   .me-dot{position:absolute;pointer-events:none;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;background:#1e90ff;border:3px solid #fff;box-shadow:0 0 0 2px rgba(30,144,255,.5),0 2px 6px rgba(0,0,0,.4);z-index:8;transition:transform .25s ease}
@@ -199,6 +200,7 @@
     </div>
     <div class="mapbtns"><button id="zin">+</button><button id="zout">−</button></div>
     <div class="status" id="status" style="display:none"></div>
+    <button class="reroute-fab" id="rerouteBtn">🧭 Route me back</button>
     <div class="livebar">
       <div class="livebtns">
         <button class="lbtn icon" id="wholeBtn" title="Whole route" aria-label="Whole route"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5"/><path d="M4 4l6.5 6.5"/><path d="M15 4h5v5"/><path d="M20 4l-6.5 6.5"/><path d="M9 20H4v-5"/><path d="M4 20l6.5-6.5"/><path d="M15 20h5v-5"/><path d="M20 20l-6.5-6.5"/></svg></button>
@@ -262,6 +264,8 @@
 
 <div class="modal" id="welcomeModal"><div class="chat" style="height:auto;max-width:360px;width:92%">
   <style>
+    #welcomeModal{align-items:center !important;justify-content:center !important;padding:16px}
+    #welcomeModal .chat{height:auto !important;max-height:88vh !important;max-width:360px !important;width:92% !important;border-radius:18px !important;margin:0 !important}
     .wc-head{display:flex;justify-content:flex-end;padding:10px 12px 0}
     .wc-skip{border:none;background:none;color:#9aa3af;font-size:13px;font-weight:600;cursor:pointer}
     #wcPages{padding:4px 22px 2px;min-height:212px;display:flex;align-items:center}
@@ -488,8 +492,10 @@ function render(){
     const r=Math.min(120,(me.acc||20)/mPerPx(dlat,z));
     acc=`<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="${r.toFixed(1)}" fill="rgba(30,144,255,.15)" stroke="rgba(30,144,255,.5)" stroke-width="1"/>`;
   }
+  let rsvg='';
+  if(recoveryRoute&&recoveryRoute.length){ const rpts=recoveryRoute.map(([la,lo])=>`${(lonToWX(lo,z)-originX).toFixed(1)},${(latToWY(la,z)-originY).toFixed(1)}`).join(' '); rsvg=`<polyline points="${rpts}" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" opacity="0.55"/><polyline points="${rpts}" fill="none" stroke="#e8590c" stroke-width="5.5" stroke-dasharray="1 13" stroke-linecap="round"/>`; }
   svg.innerHTML=`<polyline points="${pts}" fill="none" stroke="#fff" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" opacity="0.6"/>
-                 <polyline points="${pts}" fill="none" stroke="#0E9AA7" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>${acc}`;
+                 <polyline points="${pts}" fill="none" stroke="#0E9AA7" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>${rsvg}${acc}`;
   // markers (counter-rotate so numbers stay upright)
   markersEl.innerHTML='';
   order.forEach((origIdx,pos)=>{
@@ -616,6 +622,7 @@ const ARRIVE=60, OFFROUTE=45;
 let reached=new Set(), nextStop=0, voiceOn=true, watchId=null;
 let touring=false, headingToStart=false, skipping=false, previewing=false, returningToHub=false;
 let phase='enroute';             // 'atstop' (arrived, narration done) | 'enroute' (heading to nextStop)
+let recovering=false, recoveryRoute=null, recMan=[]; const REJOIN=22;   // off-path recovery state
 let hubIdx=0, reviiSeen=false;   // Zoomr Zone stop index / one-time Revii intro shown
 const statusEl=document.getElementById('status');
 const fmt=m=> m<1000 ? Math.round(m/5)*5+' m' : (m/1000).toFixed(1)+' km';
@@ -770,6 +777,37 @@ function upcomingTurn(lat,lon){
   }
   return null;
 }
+/* ---------- off-path recovery (efficient route back to the tour) ---------- */
+function nearestIdxOn(route,lat,lon){ let bi=0,bd=1e9; for(let i=0;i<route.length;i++){ const d=haversine(lat,lon,route[i][0],route[i][1]); if(d<bd){bd=d;bi=i;} } return bi; }
+function remainOn(route,ri,lat,lon){ let d=haversine(lat,lon,route[ri][0],route[ri][1]); for(let i=ri;i<route.length-1;i++) d+=haversine(route[i][0],route[i][1],route[i+1][0],route[i+1][1]); return d; }
+function recUpcoming(lat,lon){ if(!recMan.length) return null; const ri=nearestIdxOn(recoveryRoute,lat,lon); for(const m of recMan){ if(m._passed) continue; if(ri>m.i+2){ m._passed=true; continue; } return {m,dist:haversine(lat,lon,m.lat,m.lon)}; } return null; }
+function fetchRoute(from,to){
+  return fetch(routeEndpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({coordinates:[from,to],profile:routeProfile})})
+    .then(r=>{ if(!r.ok) throw new Error('route '+r.status); return r.json(); })
+    .then(j=>{ const f=j.features&&j.features[0]; const c=f&&f.geometry&&f.geometry.coordinates; if(!c||!c.length) throw new Error('no route'); return c.map(p=>[p[1],p[0]]); });
+}
+async function startRecovery(){
+  if(!me) return;
+  if(!routeEndpoint){ setStatus('Head back toward the highlighted route.', true); return; }
+  setStatus('Finding the best way back…');
+  const ri=nearestRouteIdx(me.lat,me.lon), tgt=DATA.route[ri];
+  try{
+    recoveryRoute=await fetchRoute([me.lon,me.lat],[tgt[1],tgt[0]]);
+    recMan=computeManeuversFor(recoveryRoute); recMan.forEach(m=>{ m._passed=false; m._said=false; });
+    recovering=true; follow=true; rotateOn=true;
+    if(voiceOn) speak('Rerouting you back to the tour. Follow the highlighted route.','turn');
+    render(); updateRerouteBtn(true);
+  }catch(e){ recoveryRoute=null; recovering=false; setStatus('Could not find a route — head back toward the path.', true); }
+}
+function guideRecovery(lat,lon){
+  const ri=nearestIdxOn(recoveryRoute,lat,lon), remain=remainOn(recoveryRoute,ri,lat,lon);
+  const t=recUpcoming(lat,lon);
+  if(t && t.dist<95){ if(voiceOn && !t.m._said && t.dist<55){ speak(maneuverText(t.m),'turn'); t.m._said=true; } setStatus('↩ '+maneuverText(t.m)+' · back on tour in '+fmt(remain)); }
+  else setStatus('↩ Follow the highlighted route · back on tour in '+fmt(remain));
+}
+function endRecovery(rejoined){ recovering=false; recoveryRoute=null; recMan=[]; updateRerouteBtn(false); render(); if(rejoined){ if(voiceOn) speak('You are back on the tour route.','turn'); setStatus('✅ Back on the tour route'); } }
+function updateRerouteBtn(offRoute){ const b=document.getElementById('rerouteBtn'); if(!b) return; const vis=(routeEndpoint && (recovering || offRoute)); b.style.display=vis?'flex':'none'; b.textContent=recovering?'✕ Stop reroute':'🧭 Route me back'; }
+var _rb=document.getElementById('rerouteBtn'); if(_rb) _rb.onclick=function(){ recovering ? endRecovery(false) : startRecovery(); };
 async function fetchStreet(m, tourId){
   try{
     const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${m.lat}&lon=${m.lon}&zoom=17&addressdetails=1`,{headers:{'Accept':'application/json'}});
@@ -838,11 +876,17 @@ function updatePosition(lat,lon,acc){
   if(phase==='atstop' && nextStop<order.length && haversine(lat,lon,stopAt(cur).lat,stopAt(cur).lon) > 40){ goEnroute(); }
   if(nextStop>=order.length){ setStatus('Loop complete 🎉'); return; }
   const ns=stopAt(nextStop), off=distToRoute(lat,lon);
+  if(recovering && recoveryRoute){
+    if(off<REJOIN){ endRecovery(true); }                 // rejoined the tour -> resume below
+    else { guideRecovery(lat,lon); return; }
+  }
   if(off>OFFROUTE){
+    updateRerouteBtn(true);
     setStatus(skipping ? 'Find your own way — tour resumes near '+ns.name
-                       : '↩ Off route — head back to the path', !skipping);
+                       : (routeEndpoint ? '↩ Off route — head back, or tap “Route me back”' : '↩ Off route — head back to the path'), !skipping);
     return;
   }
+  updateRerouteBtn(false);
   // turn-by-turn: show the next maneuver when it's close; otherwise the next stop
   const turn=upcomingTurn(lat,lon);
   if(turn && turn.dist < (turn.m.r||85)*2){
@@ -1074,9 +1118,11 @@ let GUIDE_MODEL='claude-sonnet-4-6';
 let GUIDE_LIVE_NARRATION=false;                                  // keep stop narration scripted by default
 let GUIDE_RATE=1.0, GUIDE_VOICE='';                              // speaking speed + optional preferred voice name
 let GUIDE_KNOWLEDGE='';                                          // operator-curated facts the guide can use
+let routeEndpoint='', routeProfile='cycling-regular';            // optional 'back-to-route' wayfinding proxy
 function applyBrandLogo(logo,dark){ ['logoImg','logoImgP'].forEach(id=>{ const el=document.getElementById(id); if(!el) return; if(logo){ el.src=logo; el.style.display='inline-block'; } el.classList.toggle('chip', !!dark); }); if(logo){ const s1=document.getElementById('logoSvg'),s2=document.getElementById('logoSvgP'); if(s1)s1.style.display='none'; if(s2)s2.style.display='none'; } }
 function applyGuideConfig(cfg){ if(!cfg) return; const g=cfg.guide;
   if(g){ if(g.endpoint!=null) GUIDE_ENDPOINT=g.endpoint; if(g.model) GUIDE_MODEL=g.model; if(g.liveNarration!=null) GUIDE_LIVE_NARRATION=!!g.liveNarration; if(g.rate) GUIDE_RATE=+g.rate||1; if(g.voice!=null) GUIDE_VOICE=g.voice; if(g.knowledge!=null) GUIDE_KNOWLEDGE=g.knowledge; try{ pickVoice(); }catch(e){} }
+  if(cfg.route){ routeEndpoint=cfg.route.endpoint||''; routeProfile=cfg.route.profile||'cycling-regular'; }
   if(cfg.logo!=null || cfg.logoDark!=null) applyBrandLogo(cfg.logo, cfg.logoDark);
 }
 
@@ -1249,6 +1295,7 @@ function clearLive(){
   if(navReq!=null){ cancelAnimationFrame(navReq); navReq=null; } dispLat=null; dispLon=null;
   reached=new Set(); nextStop=0; cur=0;
   touring=false; headingToStart=false; previewing=false; skipping=false; returningToHub=false; phase='enroute';
+  recovering=false; recoveryRoute=null; recMan=[]; updateRerouteBtn(false);
   document.getElementById('endNowBtn').style.display='none';
   const _nc=document.getElementById('nextCue'); if(_nc) _nc.style.display='none';
   document.getElementById('status').style.display='none';
@@ -1320,7 +1367,7 @@ function simStart(idx, speed){
   reportSim();
 }
 window.addEventListener('message',function(e){ const d=e&&e.data; if(!d) return;
-  if(d.zoomrPreview && Array.isArray(d.zoomrTours) && d.zoomrTours.length){ window.__zoomrPreview=true; simStop(); TOURS=d.zoomrTours; DATA=TOURS[0]; applyGuideConfig({guide:d.zoomrGuide, logo:d.zoomrLogo, logoDark:d.zoomrLogoDark}); TOURS.forEach(t=>t._man=null); try{showPicker();}catch(_){ } initApp(); return; }
+  if(d.zoomrPreview && Array.isArray(d.zoomrTours) && d.zoomrTours.length){ window.__zoomrPreview=true; simStop(); TOURS=d.zoomrTours; DATA=TOURS[0]; applyGuideConfig({guide:d.zoomrGuide, logo:d.zoomrLogo, logoDark:d.zoomrLogoDark, route:d.zoomrRoute}); TOURS.forEach(t=>t._man=null); try{showPicker();}catch(_){ } initApp(); return; }
   if(d.zoomrSim && window.__zoomrPreview){
     if(d.zoomrSim==='start') simStart(d.idx||0, d.speed||20);
     else if(d.zoomrSim==='speed') simSpeedKmh=d.speed||20;
