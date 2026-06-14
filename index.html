@@ -61,7 +61,7 @@
     padding:8px 12px;font-size:12.5px;font-weight:700;color:#333;cursor:pointer;display:flex;align-items:center;gap:6px}
   .attr{position:absolute;left:6px;bottom:3px;font-size:9px;color:#5b6472;background:rgba(255,255,255,.7);padding:1px 5px;border-radius:4px;z-index:15}
   .ai-fab{position:absolute;right:12px;bottom:14px;z-index:26;background:var(--ink);color:#fff;border:none;border-radius:999px;padding:11px 15px;font-weight:700;font-size:13.5px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;gap:7px}
-  .reroute-fab{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;z-index:27;background:#e8590c;color:#fff;border:none;border-radius:999px;padding:11px 16px;font-weight:800;font-size:13.5px;box-shadow:var(--shadow);cursor:pointer;display:none;align-items:center;gap:6px}
+  .reroute-fab{position:absolute;left:50%;transform:translateX(-50%);bottom:70px;z-index:27;background:#e8590c;color:#fff;border:none;border-radius:999px;padding:11px 16px;font-weight:800;font-size:13.5px;box-shadow:var(--shadow);cursor:pointer;display:none;align-items:center;gap:6px}
   .ai-fab-picker{position:fixed;right:16px;bottom:18px;z-index:85;background:var(--ink);color:#fff;border:none;border-radius:999px;padding:13px 18px;font-weight:700;font-size:14px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;gap:7px}
   /* live position */
   .me-dot{position:absolute;pointer-events:none;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;background:#1e90ff;border:3px solid #fff;box-shadow:0 0 0 2px rgba(30,144,255,.5),0 2px 6px rgba(0,0,0,.4);z-index:8;transition:transform .25s ease}
@@ -93,7 +93,7 @@
   .mrow .mstart.on{background:var(--orange);color:#fff}
   .mrow .mtog{border:none;background:#eef0f4;width:30px;height:30px;border-radius:8px;font-size:15px;cursor:pointer;flex:0 0 auto}
   .lbtn.go{background:#10b981;color:#fff}
-  .status{position:absolute;top:54px;left:50%;transform:translateX(-50%);z-index:18;pointer-events:none;background:rgba(29,34,48,.92);color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:14px;max-width:86%;text-align:center;line-height:1.35;white-space:normal;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+  .status{position:absolute;top:54px;left:12px;max-width:72%;text-align:left;z-index:18;pointer-events:none;background:rgba(29,34,48,.92);color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:14px;line-height:1.35;white-space:normal;box-shadow:0 2px 8px rgba(0,0,0,.2)}
   .status.warn{background:#c2410c}
   /* SHEET */
   .sheet{position:relative;background:var(--card);border-top-left-radius:20px;border-top-right-radius:20px;box-shadow:var(--shadow);padding:14px 16px 18px;z-index:40;overflow-y:auto}
@@ -122,6 +122,8 @@
   .btn:disabled{opacity:.45}
   .ask-fab{position:absolute;right:16px;bottom:calc(100% + 14px);padding:12px 16px;border-radius:999px;background:var(--ink);color:#fff;font-weight:700;font-size:14px;border:none;box-shadow:var(--shadow);cursor:pointer;z-index:25}
   .modal{position:fixed;inset:0;background:rgba(15,18,28,.45);z-index:90;display:none;align-items:flex-end;justify-content:center}
+  .modal.center-modal{align-items:center;justify-content:center;padding:16px}
+  .modal.center-modal .chat{height:auto;max-height:90vh;max-width:340px;width:92%;border-radius:18px;margin:0}
   .modal.open{display:flex}
   .chat{width:100%;max-width:480px;background:#fff;border-top-left-radius:20px;border-top-right-radius:20px;display:flex;flex-direction:column;height:70vh}
   .chat-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
@@ -296,6 +298,16 @@
   </div>
   <div class="wc-dots"><span class="on"></span><span></span><span></span></div>
   <button class="btn next" id="wcNext" style="width:calc(100% - 32px);margin:0 16px 16px">Next ›</button>
+</div></div>
+
+<div class="modal center-modal" id="skipWarnModal"><div class="chat">
+  <div style="padding:22px 20px;text-align:center">
+    <div style="font-size:34px">⚠️</div>
+    <h3 style="margin:8px 0 8px;font-size:19px;color:#1d2230">Skip to the next stop?</h3>
+    <p style="margin:0 0 16px;font-size:14px;line-height:1.55;color:#3a4150">We&rsquo;ll route you to the next stop the most efficient way. That route may use <b>busier streets that aren&rsquo;t part of the scenic tour</b> — please ride with extra caution and follow all traffic rules.</p>
+    <button class="btn next" id="skipWarnGo" style="width:100%;margin-bottom:8px">Skip &amp; route me there</button>
+    <button class="skip-btn" id="skipWarnCancel">Stay on the tour</button>
+  </div>
 </div></div>
 
 <div class="modal" id="endModal"><div class="chat" style="height:auto;max-height:72vh">
@@ -494,8 +506,12 @@ function render(){
   }
   let rsvg='';
   if(recoveryRoute&&recoveryRoute.length){ const rpts=recoveryRoute.map(([la,lo])=>`${(lonToWX(lo,z)-originX).toFixed(1)},${(latToWY(la,z)-originY).toFixed(1)}`).join(' '); rsvg=`<polyline points="${rpts}" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" opacity="0.55"/><polyline points="${rpts}" fill="none" stroke="#e8590c" stroke-width="5.5" stroke-dasharray="1 13" stroke-linecap="round"/>`; }
-  svg.innerHTML=`<polyline points="${pts}" fill="none" stroke="#fff" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" opacity="0.6"/>
-                 <polyline points="${pts}" fill="none" stroke="#0E9AA7" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>${rsvg}${acc}`;
+  let legPts='';
+  if(touring && nextStop>0 && nextStop<order.length && stopRI.length){ let a=stopRI[order[nextStop-1]], b=stopRI[order[nextStop]]; if(a>b){const _t=a;a=b;b=_t;} legPts=DATA.route.slice(a,b+1).map(([la,lo])=>`${(lonToWX(lo,z)-originX).toFixed(1)},${(latToWY(la,z)-originY).toFixed(1)}`).join(' '); }
+  const fd = legPts ? 0.22 : 1;                                  // fade non-current legs so overlapping roads aren't confusing
+  let routeSvg=`<polyline points="${pts}" fill="none" stroke="#fff" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" opacity="${(0.6*fd).toFixed(2)}"/><polyline points="${pts}" fill="none" stroke="#0E9AA7" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" opacity="${fd}"/>`;
+  if(legPts) routeSvg+=`<polyline points="${legPts}" fill="none" stroke="#fff" stroke-width="9.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.7"/><polyline points="${legPts}" fill="none" stroke="#0E9AA7" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>`;
+  svg.innerHTML=routeSvg+rsvg+acc;
   // markers (counter-rotate so numbers stay upright)
   markersEl.innerHTML='';
   order.forEach((origIdx,pos)=>{
@@ -505,7 +521,7 @@ function render(){
     d.className='stop-marker'+(pos<cur?' done':'')+(pos===cur?' active':'');
     d.style.left=px+'px'; d.style.top=py+'px';
     d.style.transform=`translate(-50%,-50%) rotate(${mapHeading}deg)`+(pos===cur?' scale(1.22)':'');
-    d.textContent=pos+1; d.onclick=()=>goTo(pos);
+    d.textContent=(origIdx===hubIdx)?'🏁':(pos+1); d.onclick=()=>goTo(pos);
     markersEl.appendChild(d);
   });
   if(me){
@@ -622,7 +638,8 @@ const ARRIVE=60, OFFROUTE=45;
 let reached=new Set(), nextStop=0, voiceOn=true, watchId=null;
 let touring=false, headingToStart=false, skipping=false, previewing=false, returningToHub=false;
 let phase='enroute';             // 'atstop' (arrived, narration done) | 'enroute' (heading to nextStop)
-let recovering=false, recoveryRoute=null, recMan=[]; const REJOIN=22;   // off-path recovery state
+let recovering=false, recoveryRoute=null, recMan=[], recoveryMode='path', recTargetIdx=-1; const REJOIN=22;   // off-path recovery state
+let rerouteOptedOut=false, rerouteFetching=false, stopRI=[];   // auto-reroute opt-out + per-stop route index
 let hubIdx=0, reviiSeen=false;   // Zoomr Zone stop index / one-time Revii intro shown
 const statusEl=document.getElementById('status');
 const fmt=m=> m<1000 ? Math.round(m/5)*5+' m' : (m/1000).toFixed(1)+' km';
@@ -707,7 +724,7 @@ function arrive(p){
 }
 async function speakArrival(p){
   const oi=order[p], key=DATA.id+'|'+oi, s=stopAt(p);
-  let text=narrationCache[key]||s.desc;
+  let text = (p===0 && order[p]===hubIdx && s.startMsg && String(s.startMsg).trim()) ? s.startMsg : (narrationCache[key]||s.desc);
   if(aiMode()!=='off' && GUIDE_LIVE_NARRATION && !narrationCache[key]){
     try{ text=await claudeRequest(narrationSystem(),[{role:'user',content:narrationUser(p)}],240); narrationCache[key]=text; if(cur===p) $('desc').textContent=text; }catch(e){}
   }
@@ -723,10 +740,29 @@ function goEnroute(){
 }
 function skipStop(){
   if(!touring || nextStop>=order.length) return;
-  reached.add(nextStop); nextStop++; skipping=true; phase='enroute';   // skip -> head to the one after, narrate on arrival
-  if(nextStop<order.length){ cur=nextStop; renderPanel(); }
-  else { setStatus('Loop complete 🎉'); }
+  if(routeEndpoint && me){ openSkipWarn(); return; }   // routing available -> warn, then reroute efficiently
+  doSkip(false);
 }
+function doSkip(reroute){
+  if(!touring || nextStop>=order.length) return;
+  reached.add(nextStop); nextStop++; skipping=true; phase='enroute';
+  if(nextStop>=order.length){ setStatus('Loop complete 🎉'); return; }
+  cur=nextStop; renderPanel();
+  if(reroute) routeToStop(nextStop, 'Taking you to '+stopAt(nextStop).name+' the quick way. Watch for traffic and follow the rules of the road.');
+}
+async function routeToStop(idx, voiceLine){
+  if(!me||!routeEndpoint||rerouteFetching) return;
+  rerouteFetching=true; const s=stopAt(idx); recTargetIdx=idx; setStatus('Routing to '+s.name+'…');
+  try{
+    recoveryRoute=await fetchRoute([me.lon,me.lat],[s.lon,s.lat]);
+    recMan=computeManeuversFor(recoveryRoute); recMan.forEach(m=>{ m._passed=false; m._said=false; });
+    recovering=true; recoveryMode='stop'; follow=true; rotateOn=true;
+    if(voiceOn) speak(voiceLine||('Taking you to '+s.name+'.'),'turn');
+    render(); updateRerouteBtn(true);
+  }catch(e){ recoveryRoute=null; recovering=false; setStatus('Could not route there — follow the tour to '+s.name+'.'); }
+  finally{ rerouteFetching=false; }
+}
+function openSkipWarn(){ document.getElementById('skipWarnModal').classList.add('open'); }
 /* ---------- turn-by-turn (geometric, from the drawn path + free OSM street names) ---------- */
 let maneuvers=[];
 function bearing(a,b){const φ1=rad(a[0]),φ2=rad(b[0]),Δλ=rad(b[1]-a[1]);
@@ -787,27 +823,28 @@ function fetchRoute(from,to){
     .then(j=>{ const f=j.features&&j.features[0]; const c=f&&f.geometry&&f.geometry.coordinates; if(!c||!c.length) throw new Error('no route'); return c.map(p=>[p[1],p[0]]); });
 }
 async function startRecovery(){
-  if(!me) return;
-  if(!routeEndpoint){ setStatus('Head back toward the highlighted route.', true); return; }
-  setStatus('Finding the best way back…');
+  if(!me||rerouteFetching||!routeEndpoint) return;
+  rerouteFetching=true; setStatus('Finding the best way back…'); updateRerouteBtn(true);
   const ri=nearestRouteIdx(me.lat,me.lon), tgt=DATA.route[ri];
   try{
     recoveryRoute=await fetchRoute([me.lon,me.lat],[tgt[1],tgt[0]]);
     recMan=computeManeuversFor(recoveryRoute); recMan.forEach(m=>{ m._passed=false; m._said=false; });
-    recovering=true; follow=true; rotateOn=true;
+    recovering=true; recoveryMode='path'; follow=true; rotateOn=true;
     if(voiceOn) speak('Rerouting you back to the tour. Follow the highlighted route.','turn');
     render(); updateRerouteBtn(true);
   }catch(e){ recoveryRoute=null; recovering=false; setStatus('Could not find a route — head back toward the path.', true); }
+  finally{ rerouteFetching=false; }
 }
-function guideRecovery(lat,lon){
+function guideRecovery(lat,lon,toLabel){
+  toLabel=toLabel||'back on tour';
   const ri=nearestIdxOn(recoveryRoute,lat,lon), remain=remainOn(recoveryRoute,ri,lat,lon);
   const t=recUpcoming(lat,lon);
-  if(t && t.dist<95){ if(voiceOn && !t.m._said && t.dist<55){ speak(maneuverText(t.m),'turn'); t.m._said=true; } setStatus('↩ '+maneuverText(t.m)+' · back on tour in '+fmt(remain)); }
-  else setStatus('↩ Follow the highlighted route · back on tour in '+fmt(remain));
+  if(t && t.dist<95){ if(voiceOn && !t.m._said && t.dist<55){ speak(maneuverText(t.m),'turn'); t.m._said=true; } setStatus('↩ '+maneuverText(t.m)+' · '+toLabel+' in '+fmt(remain)); }
+  else setStatus('↩ Follow the highlighted route · '+toLabel+' in '+fmt(remain));
 }
-function endRecovery(rejoined){ recovering=false; recoveryRoute=null; recMan=[]; updateRerouteBtn(false); render(); if(rejoined){ if(voiceOn) speak('You are back on the tour route.','turn'); setStatus('✅ Back on the tour route'); } }
-function updateRerouteBtn(offRoute){ const b=document.getElementById('rerouteBtn'); if(!b) return; const vis=(routeEndpoint && (recovering || offRoute)); b.style.display=vis?'flex':'none'; b.textContent=recovering?'✕ Stop reroute':'🧭 Route me back'; }
-var _rb=document.getElementById('rerouteBtn'); if(_rb) _rb.onclick=function(){ recovering ? endRecovery(false) : startRecovery(); };
+function endRecovery(rejoined){ recovering=false; recoveryRoute=null; recMan=[]; recoveryMode='path'; recTargetIdx=-1; updateRerouteBtn(false); render(); if(rejoined){ if(voiceOn) speak('You are back on the tour route.','turn'); setStatus('✅ Back on the tour route'); } }
+function updateRerouteBtn(offRoute){ const b=document.getElementById('rerouteBtn'); if(!b) return; const vis=(routeEndpoint && !rerouteOptedOut && (recovering || rerouteFetching || offRoute)); b.style.display=vis?'flex':'none'; b.textContent='cancel reroute'; }
+var _rb=document.getElementById('rerouteBtn'); if(_rb) _rb.onclick=function(){ rerouteOptedOut=true; endRecovery(false); updateRerouteBtn(false); };
 async function fetchStreet(m, tourId){
   try{
     const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${m.lat}&lon=${m.lon}&zoom=17&addressdetails=1`,{headers:{'Accept':'application/json'}});
@@ -855,7 +892,7 @@ function updatePosition(lat,lon,acc){
   if(previewing) return;                       // preview is manual step-through; just show the live dot
   if(returningToHub){                          // tour over, guiding back to the Zoomr Zone
     const hub=DATA.stops[hubIdx], d=haversine(lat,lon,hub.lat,hub.lon);
-    if(d < (hub._r||ARRIVE)){ returningToHub=false; setStatus('🛴 Back at the Zoomr Zone — end your rental in the Revii app'); return; }
+    if(d < (hub._r||ARRIVE)){ returningToHub=false; const _em=(hub.endMsg&&String(hub.endMsg).trim())?hub.endMsg:''; if(_em){ $('desc').textContent=_em; if(voiceOn) speak(_em,'stop'); } setStatus('🏁 Back at the Start / Finish Zone — end your rental in the Revii app'); return; }
     setStatus('🔚 Back to '+hub.name+' · '+fmt(d)); return;
   }
   const s0=stopAt(0), d0=haversine(lat,lon,s0.lat,s0.lon);
@@ -877,16 +914,26 @@ function updatePosition(lat,lon,acc){
   if(nextStop>=order.length){ setStatus('Loop complete 🎉'); return; }
   const ns=stopAt(nextStop), off=distToRoute(lat,lon);
   if(recovering && recoveryRoute){
-    if(off<REJOIN){ endRecovery(true); }                 // rejoined the tour -> resume below
-    else { guideRecovery(lat,lon); return; }
+    if(recoveryMode==='stop'){
+      if(recTargetIdx<0 || reached.has(recTargetIdx)){ endRecovery(false); }   // reached the stop (arrival fired above) -> resume
+      else { guideRecovery(lat,lon,'to '+stopAt(recTargetIdx).name); return; }
+    } else {
+      if(off<REJOIN){ endRecovery(true); }                 // rejoined the tour -> resume below
+      else { guideRecovery(lat,lon,'back on tour'); return; }
+    }
   }
-  if(off>OFFROUTE){
-    updateRerouteBtn(true);
-    setStatus(skipping ? 'Find your own way — tour resumes near '+ns.name
-                       : (routeEndpoint ? '↩ Off route — head back, or tap “Route me back”' : '↩ Off route — head back to the path'), !skipping);
+  if(nextStop===0 && !reached.has(0) && !recovering){          // heading to the start of the tour (no live routing)
+    setStatus('Follow the route to the start — '+stopAt(0).name+' · '+fmt(haversine(lat,lon,stopAt(0).lat,stopAt(0).lon)));
     return;
   }
-  updateRerouteBtn(false);
+  if(off>OFFROUTE){
+    if(routeEndpoint && me && !skipping && !recovering && !rerouteOptedOut && !rerouteFetching) startRecovery();   // auto-reroute
+    updateRerouteBtn(true);
+    setStatus(skipping ? 'Find your own way — tour resumes near '+ns.name
+                       : (routeEndpoint ? '↩ Off route — guiding you back' : '↩ Off route — head back to the path'), !skipping);
+    return;
+  }
+  rerouteOptedOut=false; updateRerouteBtn(false);
   // turn-by-turn: show the next maneuver when it's close; otherwise the next stop
   const turn=upcomingTurn(lat,lon);
   if(turn && turn.dist < (turn.m.r||85)*2){
@@ -909,7 +956,7 @@ function setStartCta(show,mode){
   cta.style.display='block'; nav.style.display='none'; arow.style.display='none';
   const btn=document.getElementById('startBtn'), hint=document.getElementById('startHint'),
         pv=document.getElementById('previewBtn'), s0=stopAt(0).name;
-  if(mode==='heading'){ btn.textContent='Start here anyway'; pv.style.display='none'; hint.textContent='🚶 Head to '+s0+' — starts automatically on arrival.'; }
+  if(mode==='heading'){ btn.textContent='Guide me to the start ›'; pv.style.display='none'; hint.textContent='🚶 We’ll guide you to '+s0+' — your tour begins when you arrive.'; }
   else { btn.textContent='▶ Start tour'; pv.style.display='block'; hint.textContent='Preview the stops, or start and we’ll begin when you reach '+s0+'.'; }
 }
 function beginTour(){
@@ -918,7 +965,12 @@ function beginTour(){
   follow=true; rotateOn=true; state.z=Math.max(state.z,16);   // follow + heading-up while touring
   if(riderHeading!=null) mapHeading=riderHeading;
   resetManeuvers();
-  if(me){ arrive(0); } else { cur=0; renderPanel(); }
+  const s0=stopAt(0);
+  if(me && haversine(me.lat,me.lon,s0.lat,s0.lon) < (s0._r||ARRIVE)){ arrive(0); }                 // already at the start
+  else { cur=0; renderPanel();                                                                      // away -> guide/route to the start
+    if(me && routeEndpoint){ routeToStop(0,'Follow the route to the start of the tour.'); }
+    else if(voiceOn){ speak('Follow the route to the start of the tour.','turn'); }
+  }
 }
 /* ----- end-of-tour flow ----- */
 function openEndModal(){ document.getElementById('endModal').classList.add('open'); }
@@ -970,6 +1022,9 @@ function startTour(){
 }
 document.getElementById('startBtn').onclick=()=>{ headingToStart ? beginTour() : startTour(); };
 document.getElementById('skipBtn').onclick=skipStop;
+document.getElementById('skipWarnGo').onclick=()=>{ document.getElementById('skipWarnModal').classList.remove('open'); doSkip(true); };
+document.getElementById('skipWarnCancel').onclick=()=>document.getElementById('skipWarnModal').classList.remove('open');
+document.getElementById('skipWarnModal').onclick=e=>{ if(e.target.id==='skipWarnModal') e.currentTarget.classList.remove('open'); };
 
 /* ----- manage route (choose start + remove stops) ----- */
 let mStart=0;                                   // chosen start (original stop index)
@@ -1063,11 +1118,12 @@ const stopAt=p=>DATA.stops[order[p]];          // stop object at active position
 function renderPanel(){
   if(!order.length) return;
   const _nc=document.getElementById('nextCue'); if(_nc) _nc.style.display='none';   // shown only on arrival
-  const s=stopAt(cur), oi=order[cur], N=order.length;
-  $('emoji').textContent=s.emoji;$('tag').textContent=s.tagline;$('name').textContent=s.name;
-  $('desc').textContent=narrationCache[DATA.id+'|'+oi]||s.desc;   // AI narration enriches the stop info
+  const s=stopAt(cur), oi=order[cur], N=order.length, isHub=(oi===hubIdx);
+  $('emoji').textContent = isHub ? '🏁' : s.emoji;
+  $('tag').textContent=s.tagline;$('name').textContent=s.name;
+  $('desc').textContent = (isHub && cur===0 && s.startMsg && String(s.startMsg).trim()) ? s.startMsg : (narrationCache[DATA.id+'|'+oi]||s.desc);
   $('tip').innerHTML='<b>Local tip:</b> '+s.tip;
-  $('progtxt').textContent=`Stop ${cur+1} of ${N}`;
+  $('progtxt').textContent = isHub ? '🏁 Start / Finish Zone' : `Stop ${cur+1} of ${N}`;
   $('progfill').style.width=(N>1?cur/(N-1)*100:0)+'%';
   $('prev').disabled=cur===0;
   $('next').textContent=cur===N-1?'Finish ✓':'Next stop ›';
@@ -1295,7 +1351,7 @@ function clearLive(){
   if(navReq!=null){ cancelAnimationFrame(navReq); navReq=null; } dispLat=null; dispLon=null;
   reached=new Set(); nextStop=0; cur=0;
   touring=false; headingToStart=false; previewing=false; skipping=false; returningToHub=false; phase='enroute';
-  recovering=false; recoveryRoute=null; recMan=[]; updateRerouteBtn(false);
+  recovering=false; recoveryRoute=null; recMan=[]; recoveryMode='path'; recTargetIdx=-1; rerouteOptedOut=false; rerouteFetching=false; updateRerouteBtn(false);
   document.getElementById('endNowBtn').style.display='none';
   const _nc=document.getElementById('nextCue'); if(_nc) _nc.style.display='none';
   document.getElementById('status').style.display='none';
@@ -1308,6 +1364,7 @@ function loadTour(i){
   document.getElementById('tourName').textContent=DATA.tour.name;
   document.getElementById('pill').textContent=`${DATA.km} km · ${DATA.dur}`;
   const _ss=(DATA.zones&&DATA.zones.stopScale)||1; DATA.stops.forEach(s=>{ const base=(s.r!=null?s.r:Math.max(55, distToRoute(s.lat,s.lon)+30)); s._r=base*_ss; }); // per-stop arrival radius (individual × global scale)
+  stopRI=DATA.stops.map(s=>nearestRouteIdx(s.lat,s.lon));   // route index nearest each stop (for leg highlighting)
   order=DATA.stops.map((_,i)=>i);            // default: all stops in original order
   hubIdx=DATA.stops.findIndex(s=>/zoomr zone/i.test(s.name)); if(hubIdx<0) hubIdx=DATA.stops.findIndex(s=>/qv cafe/i.test(s.name)); if(hubIdx<0) hubIdx=0;
   maneuvers = DATA._man || (DATA._man=buildManeuvers(DATA));   // turn-by-turn cues along the path
