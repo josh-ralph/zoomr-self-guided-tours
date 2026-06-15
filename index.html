@@ -631,6 +631,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function landscapeMode(){ return window.matchMedia('(orientation: landscape) and (max-height: 600px)').matches; }
 grabEl.addEventListener('pointerdown',e=>{
   if(landscapeMode()) return;
+  if(sheetAnim){ cancelAnimationFrame(sheetAnim); sheetAnim=null; }
   sheetDrag={y:e.clientY, h:sheetEl.getBoundingClientRect().height};
   try{grabEl.setPointerCapture(e.pointerId);}catch(_){}
   e.preventDefault();
@@ -651,10 +652,17 @@ window.addEventListener('pointermove',e=>{
   }
 });
 window.addEventListener('pointerup',()=>{ sheetDrag=null; vDrag=null; });
-function sheetH(px){ if(landscapeMode()) return; sheetEl.style.height=Math.round(px)+'px'; render(); }
-function defaultSheet(){ if(landscapeMode()||appEl.clientHeight<=200) return; const hc=document.getElementById('headControls'); if(hc) hc.style.display='block'; sheetH(appEl.clientHeight*0.46); }   // arrived: show stop info + buttons
-function expandSheet(){ defaultSheet(); }
-function collapseSheet(){ if(landscapeMode()) return; const hc=document.getElementById('headControls'); if(hc) hc.style.display='none'; const head=sheetEl.querySelector('.sheet-head'); sheetH((head?head.offsetHeight:30)+8); }   // enroute: maximise map
+let sheetAnim=null;
+function sheetH(px,animate){ if(landscapeMode()) return; px=Math.round(px);
+  if(sheetAnim){ cancelAnimationFrame(sheetAnim); sheetAnim=null; }
+  if(!animate){ sheetEl.style.height=px+'px'; render(); return; }
+  const from=sheetEl.getBoundingClientRect().height||px, t0=performance.now(), dur=320;
+  const step=now=>{ let k=Math.min(1,(now-t0)/dur); const e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2; sheetEl.style.height=Math.round(from+(px-from)*e)+'px'; render(); if(k<1) sheetAnim=requestAnimationFrame(step); else sheetAnim=null; };
+  sheetAnim=requestAnimationFrame(step);
+}
+function defaultSheet(animate){ if(landscapeMode()||appEl.clientHeight<=200) return; const hc=document.getElementById('headControls'); if(hc) hc.style.display='block'; sheetH(appEl.clientHeight*0.46, animate); }   // arrived: show stop info + buttons
+function expandSheet(){ defaultSheet(true); }
+function collapseSheet(){ if(landscapeMode()) return; const hc=document.getElementById('headControls'); if(hc) hc.style.display='none'; const head=sheetEl.querySelector('.sheet-head'); sheetH((head?head.offsetHeight:30)+8, true); }   // enroute: maximise map
 
 /* ---------- Live position engine ---------- */
 const ARRIVE=60, OFFROUTE=45;
@@ -764,16 +772,21 @@ function arrive(p){
   speakArrival(p);
 }
 async function speakArrival(p){
-  const oi=order[p], key=DATA.id+'|'+oi, s=stopAt(p);
-  let text = (p===0 && order[p]===hubIdx && s.startMsg && String(s.startMsg).trim()) ? s.startMsg : (narrationCache[key]||s.desc);
+  const oi=order[p], key=DATA.id+'|'+oi, s=stopAt(p), atStart=(p===0 && order[p]===hubIdx);
+  const legs=(DATA.legs && DATA.legs[oi]!=null && String(DATA.legs[oi]).trim()) ? DATA.legs[oi] : '';   // "Spoken narration" field
+  let text = narrationCache[key] || legs || s.desc;
   if(aiMode()!=='off' && GUIDE_LIVE_NARRATION && !narrationCache[key]){
     try{ text=await claudeRequest(narrationSystem(),[{role:'user',content:narrationUser(p)}],240); narrationCache[key]=text; if(cur===p) $('desc').textContent=text; }catch(e){}
   }
   if(!voiceOn) return;
-  const start=(p===0 && order[p]===hubIdx);
-  const narr={ audio: start ? s.startAudio : s.audio, text: text, off: start ? !!s.startOff : false };
+  const narr={ audio: s.audio, text: text, off: false };                                  // the stop's own narration (independent)
   const cue ={ audio: s.departAudio, text: departCue(p), off: !!s.departOff };
-  playSeg(narr, ()=> playSeg(cue));
+  if(atStart){
+    const launch={ audio: s.startAudio, text:(s.startMsg && String(s.startMsg).trim())?s.startMsg:'', off: !!s.startOff };   // launch intro, skipped independently
+    playSeg(launch, ()=> playSeg(narr, ()=> playSeg(cue)));
+  } else {
+    playSeg(narr, ()=> playSeg(cue));
+  }
 }
 // rider leaves a stop (or taps Next): switch focus to the next target — but DON'T narrate until they arrive there
 function goEnroute(){
@@ -956,7 +969,7 @@ function updatePosition(lat,lon,acc){
     if(haversine(lat,lon,ns.lat,ns.lon) < (ns._r||ARRIVE)){ arrive(nextStop); }
   }
   // once they ride away from the stop, switch focus to the next leg (still no narration until arrival)
-  if(phase==='atstop' && nextStop<order.length && haversine(lat,lon,stopAt(cur).lat,stopAt(cur).lon) > 40){ goEnroute(); }
+  if(phase==='atstop' && nextStop<order.length && haversine(lat,lon,stopAt(cur).lat,stopAt(cur).lon) > ((stopAt(cur)._r||ARRIVE)+5)){ goEnroute(); }
   if(nextStop>=order.length){ if(!returningToHub){ returnToHub(); if(voiceOn) speak('That’s the last stop! Follow the route back to the Start and Finish Zone.','turn'); } return; }
   const ns=stopAt(nextStop), off=distToRoute(lat,lon);
   if(recovering && recoveryRoute){
@@ -1475,6 +1488,7 @@ function simStart(idx, speed){
   if(watchId!=null){ try{navigator.geolocation.clearWatch(watchId);}catch(e){} watchId=null; }  // no real GPS during sim
   loadTour(idx||0);
   simTotal=routeLen(DATA.route); simDist=0; simLastPos=null;
+  const _s0=stopAt(0); me={lat:_s0.lat,lon:_s0.lon,acc:6};   // begin inside the start zone (so it arrives, not "head to start")
   beginTour();                       // behaves exactly like tapping "Start tour" — live ride UI + arrival narration
   simTimer=setInterval(simTick,100);
   reportSim();
