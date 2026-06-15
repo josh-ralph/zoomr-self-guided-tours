@@ -2125,9 +2125,10 @@
           "lat": 48.429384,
           "lon": -123.366668,
           "emoji": "☕",
-          "tagline": "Your starting line & Zoomr Zone",
-          "desc": "Grab a coffee and a fresh pastry before you roll out. This is your Zoomr Zone — unlock your Zoomr in the Levy app, snap on your helmet, and meet your virtual guide. The Coastal Loop is a ~7 km mostly-flat ride hugging Victoria's waterfront.",
-          "tip": "Fill your water bottle here — the next café stop isn't until you loop back."
+          "tagline": "The starting line.",
+          "desc": "Welcome to The Coastal Loop Tour - this is our most attraction packed tour. At 7km long and mostly waterfront - you will explore all of the best Victoria has to offer.",
+          "tip": "Fill your water bottle here — the next café stop isn't until you loop back.",
+          "depart": "When you are ready to ride, head left down government street."
         },
         {
           "name": "Inner Harbour",
@@ -2135,9 +2136,10 @@
           "lon": -123.368645,
           "emoji": "⛵",
           "tagline": "The postcard heart of Victoria",
-          "desc": "The Inner Harbour is Victoria's living room: the ivy-covered Fairmont Empress, the floodlit Parliament Buildings, float planes landing on the water, and buskers along the causeway. In summer the harbour fills with kayaks and water taxis.",
-          "tip": "Stay on the lower causeway path — it's car-free and far more scenic than the road above.",
-          "r": 80
+          "desc": "The Inner Harbour has been the heart of this region for thousands of years. The Lək̓ʷəŋən peoples — the Songhees and Esquimalt Nations — maintained fishing villages along its shores, and the harbour's rich supply of clams, salmon, and shellfish drew trading canoes from as far away as Oregon and Haida Gwaii.\n\nThe Hudson's Bay Company arrived in 1843 and established Fort Victoria — initially named Fort Albert, before being renamed in honour of Queen Victoria — where Bastion Square stands today. For the first decade, it was a modest outpost. Then, on April 25, 1858, a ship arrived from California carrying 600 gold miners. Word had spread: gold had been found on the Fraser River. Within months, 30,000 more followed, and Victoria transformed overnight into a boomtown of supply merchants, shipyards, sawmills, and ironworks.\n\nThe causeway was built in 1903, filling in the old James Bay mud flats and making way for the Empress Hotel — the moment Victoria pivoted from industrial port to tourist destination. The Songhees were displaced from their harbour lands that same era, relocated west of the city for $10,000 per family. After the Second World War, industry slowly retreated, and the Inner Harbour became what it is today: the city's living room, and the place it all began.",
+          "tip": "Check out the vendors on the lower causeway for handmade art or a snack. ",
+          "r": 80,
+          "depart": "Head south past the parliament building when you are ready."
         },
         {
           "name": "Fisherman's Wharf",
@@ -2145,18 +2147,20 @@
           "lon": -123.382967,
           "emoji": "🦭",
           "tagline": "Floating homes & harbour seals",
-          "desc": "Fisherman's Wharf is a riot of candy-coloured floating homes, food kiosks, and resident harbour seals that pop up looking for a snack. Originally a working fish dock, it's now one of the city's most-loved photo spots.",
+          "desc": "Before European settlement, this southern stretch of the Inner Harbour was Lək̓ʷəŋən territory — used for fishing and trade for thousands of years. By the mid-1800s it had become a shipyard, and in the early 1900s it was the centre of a booming seal pelt industry that collapsed around 1911 from overhunting.\n\nThe modern wharf opened in 1948, built to accommodate the commercial fishing fleet that had outgrown the old Johnson Street docks. Four berths for fishing vessels, two for \"live-aboard shelters\" — which attracted a colourful mix of fishermen, squatters, and free spirits who lived by their own rules. With no land access through the tidal marsh, police largely left the area alone. Drunken fights, gambling, and disputes over moorage were routine.\n\nThe city filled in the marsh in the 1960s, cleaned up the wharf in the 1970s, and wired the floats with power, water, and sewer. Better infrastructure brought better tenants. Barb's Fish and Chips opened in 1984 and became an institution. The colourful float homes, fish markets, and cafés you see today are the result — a community that evolved from genuine waterfront roughness into something a lot more photogenic.",
           "tip": "Barb's Fish & Chips is the local legend here — and yes, the seals really will wave.",
-          "r": 70
+          "r": 70,
+          "depart": "Go grab some fish & chips then lets continue to Dallas Road."
         },
         {
           "name": "Dallas Rd Swim Pavillion",
           "lat": 48.41375,
           "lon": -123.3815,
           "emoji": "🏊",
-          "tagline": "Open-water swimming & sea views",
-          "desc": "Dallas Road runs along open ocean with the Olympic Mountains across the strait. The swim pavilion marks a beloved cold-water swimming spot. Expect wind, driftwood beaches, and dogs everywhere on the lower trail.",
-          "tip": "This stretch can be breezy — it's why the kite-flyers love the clifftops above you."
+          "tagline": "Open-water swimming, sea and mountain views",
+          "desc": "The concrete staircase at the foot of San Jose Avenue is one of Dallas Road's most distinctive spots — a broad, ship-hull-shaped structure whose lowest steps disappear straight into the Salish Sea. It sits between Ogden Point and Beacon Hill Park.\n\nThe pavilion's original purpose was exactly what the name suggests: a place to access the water for swimming, part of Victoria's long tradition of outdoor sea swimming along this stretch of shore. In 2021 it was transformed by the FUA! Collective into a public artwork called Ocean of Consciousness, wrapping the concrete in vivid murals that now greet swimmers, walkers, and cold-water regulars year-round.\n\nAcross the water on a clear day, the Olympic Mountains of Washington State are visible about 30 kilometres to the south.",
+          "tip": "In the cold winter months you can catch locals indulging in their daily cold plunge.",
+          "depart": "When you are ready, continue down dallas road cycling path."
         },
         {
           "name": "Clover Point",
@@ -2164,9 +2168,10 @@
           "lon": -123.349462,
           "emoji": "🪂",
           "tagline": "Windswept point jutting into the strait",
-          "desc": "Clover Point pushes out into Juan de Fuca Strait, a favourite for kite-flying, whale-spotting, and watching cargo ships drift past. On a clear day Washington's Olympic Range looks close enough to touch.",
+          "desc": "Long before European contact, Clover Point was Songhees territory — a defensive site and cultivated food garden where camas, clover, parsley, onions, and ferns were harvested from the land.\n\nIn spring 1842, Hudson's Bay Company Chief Factor James Douglas landed here while scouting a location for a new fort on southern Vancouver Island. He named the point after the abundant red clover growing along the bluffs. Fort Victoria followed in 1843. From 1900 to 1931 the point served as a rifle range. During the Second World War, two large military searchlights and six crew barracks were built here to protect the harbour from potential Japanese naval attack — the barracks were later repurposed as temporary housing for veterans' families.\n\nToday Clover Point is best known as the start line for the Swiftsure International Yacht Race, held each May since 1930, and as one of Victoria's prime spots for kite surfing, whale watching, and taking in unobstructed views across the Strait of Juan de Fuca to the Olympic Peninsula.",
           "tip": "Pause at the tip — grey whales and orcas are sometimes spotted offshore in spring.",
-          "r": 160
+          "r": 160,
+          "depart": "Did you spot a whale yet? When you are done, lets head back down dallas road cycling path toward beacon hill park."
         },
         {
           "name": "Beacon Hill Park",
@@ -2174,18 +2179,19 @@
           "lon": -123.362968,
           "emoji": "🦚",
           "tagline": "Gardens, peacocks & Mile 0",
-          "desc": "Beacon Hill Park is 200 acres of gardens, ponds, and roaming peacocks, plus a children's petting farm. Nearby stands Mile 0 of the Trans-Canada Highway and a towering totem pole. It's the green finish before you coast back to the café.",
-          "tip": "Mile 0 and the Terry Fox statue are a 2-minute detour — worth the photo.",
-          "r": 300
+          "desc": "The Songhees people know this land as míqәn — \"warmed by the sun\" — and have hunted, gathered, and managed it for thousands of years. Camas fields were cultivated here for their starchy bulbs, a staple food; the hillsides also served as defensive sites and burial grounds.\n\nIn 1846, the Hudson's Bay Company erected two navigation beacons on the hilltop to mark the position of the dangerous Brotchie Ledge for ships entering the harbour — giving the park its name. The land was reserved as a park by James Douglas in 1858, and formally granted in trust to the City of Victoria in 1882, making it one of the oldest public parks in western Canada.\n\nAt 75 hectares or 190 acres, the park holds old-growth Garry oak meadows, a petting zoo, a cricket pitch, a model yacht pond, and a totem pole carved by the late Mungo Martin (Kwakwaka'wakw) in 1956, which at the time stood as the world's tallest free-standing totem pole at nearly 39 metres. The park was designated a municipal heritage site in 2009.\n\nThe peacocks are not a recent novelty — the first India Blue peafowl arrived in 1891, originally kept at the park's old zoo. Today around 40 roam freely through the park and surrounding neighbourhoods, occasionally denting car doors and screaming at 3am.",
+          "tip": "There is a sleeping giant in the forest near the ponds somewhere. Can you find her?",
+          "r": 300,
+          "depart": "Head north through the park and over the stone bridge enroute to the cafe to finish your ride. Feel free to end the tour if you would like to keep riding - your choice!"
         }
       ],
       "legs": [
-        "Welcome to the Coastal Loop! Roll out from the café heading toward the water. You'll drop gently downhill toward the Inner Harbour — keep right and enjoy the breeze.",
-        "As you approach the Inner Harbour, look for the float planes — Victoria has one of the busiest seaplane harbours in the world. The Parliament Buildings ahead are outlined by over 3,000 lights every night.",
-        "Rolling on to Fisherman's Wharf now. Fun fact: those floating homes are fully off-grid-ish little communities — some have been here for decades. Watch for seals in the water on your right.",
-        "Heading toward Dallas Road and the open ocean. You're now riding along the Strait of Juan de Fuca — that water separates Canada from the USA, and those snowy peaks are in Washington State.",
-        "On to Clover Point. This whole shoreline is part of a Pacific flyway — keep an eye out for bald eagles and, if you're lucky, a spout offshore. The point gets windy, which is exactly why kite-flyers love it.",
-        "Final stretch into Beacon Hill Park. This park has been a gathering place for thousands of years and is home to one of the world's tallest totem poles. After this, it's an easy cruise back to the café to close the loop."
+        "Welcome to The Coastal Loop! This is our most attraction packed tour. At 7km long and mostly waterfront - you will explore all of the best Victoria has to offer. Grab a coffee and a pastry at the cafe before you head out.",
+        "First stop - The Inner Harbour. Everything about Victoria starts here. The Lək̓ʷəŋən peoples fished and traded in this harbour for thousands of years. The Hudson's Bay Company showed up in 1843 and built a small trading post. It stayed small — until a ship arrived from California in April 1858 with 600 gold miners aboard. Gold had been found on the Fraser River, and within months 30,000 more people poured through this harbour. Victoria never looked back.\nThe causeway in front of you was built in 1903, filling in what used to be mud flats. The Empress Hotel followed, and the harbour's identity shifted from industrial engine to iconic destination. The Songhees — whose territory this had always been — were pushed off their harbour lands in that same era, relocated and compensated with $10,000 per family. What you're standing in now is the result of all of it: boomtown, displacement, reinvention. The harbour has been the core of this city through every version of itself.",
+        "Welcome to Fisherman's Wharf - opened in 1948 — a working dock for a working fleet. The live-aboard berths attracted fishermen, squatters, and people who didn't have anywhere else to go. There were no real rules, no easy road access through the tidal marsh, and the police mostly let things sort themselves out. By all accounts, it did not.\nThe city spent the next few decades gradually taming the place — filling in the marsh, running power and water to the floats, enforcing basic standards. The troublemakers left. The float home community grew. Barb's Fish and Chips opened in 1984 and never looked back. Today the wharf gets 650,000 visitors a year. The float homes are bright, the fish is fresh, and you'd never guess this place used to settle its disputes with fists.",
+        "You've arrived at the Dallas Road Swim Pavilion. Those stairs go all the way into the ocean — and people use them year-round. Built to give people direct access to the Salish Sea, swimming along this stretch of shore goes back generations. The structure was designed to resemble the hull of a ship — fitting, given everything that's passed through these waters.\nIn 2021, the FUA! Collective painted it with a mural called 'Ocean of Consciousness', turning functional concrete into something worth stopping for.\nThe mountains you can see across the water are the Olympics in Washington State — about 30 kilometres away. On a clear day, they look much closer.",
+        "You have arrived at Clover Point. This point has been watched from and fought over for a long time.\nThe Songhees used it as a defensive position and a food garden — clover, camas, wild onions, growing right here on the bluff. In 1842, James Douglas of the Hudson's Bay Company landed on this shore to scout the site that would become Fort Victoria. He named the point after the clover.\nA century later, searchlights and barracks appeared during the Second World War, scanning the strait for a Japanese naval threat that never came.\nNow people come to kite surf, watch for orcas, and view the Olympic Mountains across the water. Every May, this is also the start line for the Swiftsure — one of the Pacific Northwest's most storied yacht races.",
+        "You have arrived at the final stretch, Beacon Hill Park. Slowdown and take it in. People have been coming to this hillside for thousands of years. The Songhees called it míqәn — 'warmed by the sun' — and cultivated camas fields here, harvesting the bulbs as a food staple. The land was also used for ceremony, defence, and burial.\nWhen the Hudson's Bay Company arrived, they put navigation beacons on the highest point to warn ships away from the rocks offshore. That's where the name comes from. James Douglas set it aside as a park in 1858, and in 1882 it was formally given in trust to the city — a promise, still legally in effect, that this land stays public.\nThe totem pole near the entrance was carved by Mungo Martin in 1956 and was, at the time, the tallest free-standing pole in the world.\nAnd the peacocks — they've been here since 1891, originally kept at the old park zoo. When the zoo closed its doors the peacocks were released into the park. Now there are around 40 of them living wild, wandering the park and neighbouring streets. They're stunning, they're loud, and they have a habit of attacking their own reflection in freshly washed cars. Victoria loves them anyway."
       ],
       "qa": [
         {
