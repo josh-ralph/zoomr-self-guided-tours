@@ -4623,9 +4623,10 @@
           "lat": 48.429382,
           "lon": -123.366778,
           "emoji": "☕",
-          "tagline": "Start & Zoomr Zone",
+          "tagline": "Starting line & Zoomr Zone",
           "desc": "Gear up for the longest of the three loops — about 14 km, almost entirely flat rail-trail and waterfront. Top up your water bottle here.",
-          "tip": "This is the long one — start with full water and a snack."
+          "tip": "A local favourite and daily commute for many Victorians. This one is long — enjoy a coffee and a snack at the cafe before you head out.",
+          "depart": "When you're ready, turn left down government."
         },
         {
           "name": "Johnson Street Bridge",
@@ -4633,8 +4634,9 @@
           "lon": -123.371805,
           "emoji": "🌉",
           "tagline": "Victoria's iconic Blue Bridge",
-          "desc": "The Johnson Street Bridge is a bright-blue bascule (lifting) bridge over the harbour, rebuilt in 2018 with a dedicated cycling deck. Boats pass when the span tilts up.",
-          "tip": "Use the separated bike lane on the north side."
+          "desc": "Four bridges have crossed this spot since 1855 — a wagon bridge, a ferry (yes, really), a railway swing bridge, and the beloved \"Blue Bridge\" of 1924, designed by Joseph Strauss, who later built the Golden Gate. After 1979 repairs, it was repainted in the same blue as Victoria's lamp standards, earning its nickname. It served the city for nearly a century before being replaced by the current structure in 2018 — Canada's largest single-leaf bascule bridge. The blue LED lighting is a nod to Old Blue.",
+          "tip": "Use the separated bike lane on the north side.",
+          "depart": "Take in the skyline views and continue across the bridge when you're ready."
         },
         {
           "name": "Trackside Art Wall",
@@ -4642,9 +4644,10 @@
           "lon": -123.395528,
           "emoji": "🎨",
           "tagline": "Open-air street-art gallery",
-          "desc": "Along the old rail corridor, the Trackside Art Wall is a rotating canvas of legal graffiti and murals — one of the city's best free art stops.",
+          "desc": "Running along the old E&N Rail corridor between Hereward Road and Lampson Street, the Trackside Art Gallery is one of Canada's largest graffiti corridors — and one of its most unlikely success stories. Artists have been painting the backs of these warehouse walls since at least the 1980s, with no curator, no commission, and no formal management. The work rotates organically as new artists paint over old pieces. For decades the site existed in a legal grey zone, the subject of ongoing disputes between artists, property owners, and police. Today it's a legalized free wall, supported by the Township of Esquimalt, the City of Victoria, the BC Arts Council, and others. Since 2021, the annual Trackside Paint Jam has drawn local and international artists to the site for a weekend of large-scale work, open to the public.",
           "tip": "Great photo backdrop; the murals change often.",
-          "r": 115
+          "r": 115,
+          "depart": "After you're done taking selfies, continue down the galloping goose."
         },
         {
           "name": "Richards Island Viewpoint",
@@ -4652,28 +4655,31 @@
           "lon": -123.431311,
           "emoji": "🏝️",
           "tagline": "Tidal inlet & heron habitat",
-          "desc": "Richards Island viewpoint looks out over the Gorge Waterway, a tidal inlet that was Victoria's first summer playground. Watch for herons, otters and paddlers.",
-          "tip": "Look for the current — the whole inlet is tidal.",
-          "r": 70
+          "desc": "Sitting quietly in Esquimalt Harbour just off the shores of Portage Regional Park, Richards Island is a small, rocky outcrop of Garry oak and Douglas fir, reachable only by kayak, canoe, or paddleboard. It's named after Lieutenant Fleetwood John Richards, an officer aboard HMS Fisgard, the Royal Navy vessel stationed in Esquimalt Harbour from 1843 to 1847 — one of many local features that still carry the names of officers from that era.\nThe surrounding parkland has a much older story. A shell midden exposed on the beach at nearby Thetis Cove points to over 5,000 years of periodic use by Indigenous peoples — a reminder that this harbour was a gathering place long before any British ship arrived to name things.",
+          "tip": "Watch for sea otter, seals and the occasional whale!",
+          "r": 70,
+          "depart": "When you are ready, continue down the path."
         },
         {
           "name": "Gorgeous Gorge",
           "lat": 48.450621,
           "lon": -123.411694,
           "emoji": "🏞️",
-          "tagline": "Reversing tidal falls",
-          "desc": "At Tillicum Narrows the Gorge becomes one of the few reversing tidal falls in the world — the rapids literally flow backwards as the tide turns.",
-          "tip": "Time it with the tide change to catch the falls reversing."
+          "tagline": "A paddlers paradise.",
+          "desc": "The Gorge has been central to life in this region for at least 4,000 years. The Lək̓ʷəŋən peoples — the Songhees and Esquimalt First Nations — fished its waters year-round, using weir and basket traps to catch salmon, herring, and trout. When the Hudson's Bay Company established Fort Victoria in 1843, the Gorge became the industrial spine of the new colony: sawmills, shipyards, ironworks, and railyards lined its shores, and by the late 1800s Victoria was the busiest seaport north of San Francisco.\nDecades of industrial pollution took their toll. By the mid-20th century, water quality had collapsed. The turnaround began quietly in 1994, when a father and son started cleaning up the shoreline — an act that grew into a broad community movement. Today the Gorge is a recovering waterway and migratory bird sanctuary, with great blue herons, bald eagles, and seabirds returning in numbers not seen for generations.",
+          "tip": "At Tillicum Bridge, the falls reverse direction depending on the tide.",
+          "depart": "Enjoy the calm waters and continue down the bike path when you're ready."
         },
         {
-          "name": "Bamfield Park Dock",
+          "name": "Banfield Park Dock",
           "lat": 48.439268,
           "lon": -123.387828,
           "emoji": "🛶",
           "tagline": "Quiet waterfront dock",
-          "desc": "Bamfield Park's little dock is a calm rest stop and a popular kayak launch tucked along the Gorge.",
-          "tip": "Good spot to stretch and refill before the trestle.",
-          "r": 50
+          "desc": "Banfield Park sits along the southern shore of Selkirk Water, the stretch of the Gorge Waterway that winds through Victoria West. The public dock here has become one of the neighbourhood's most popular summer spots — a place to swim, paddle, or catch the Victoria Harbour Ferry deeper into the waterway.",
+          "tip": "Good spot to stretch and relax before the trestle.",
+          "r": 50,
+          "depart": "Head south to continue."
         },
         {
           "name": "Selkirk Trestle",
@@ -4681,19 +4687,20 @@
           "lon": -123.382881,
           "emoji": "🚂",
           "tagline": "Historic wooden trestle",
-          "desc": "The Selkirk Trestle is one of Canada's longest wooden rail trestles, now a walking-and-cycling bridge you ride right across the water.",
+          "desc": "The Selkirk Trestle was built by the Canadian National Railway between 1916 and 1919, crossing the Selkirk arm of the Gorge Waterway on a 300-metre span of Douglas fir and hemlock. In the early industrial era, trains hauled logs across it to the sawmills lining the Gorge, where timber was transported directly into the water.\nRail service eventually ended, and the trestle was converted into a pedestrian and cycling crossing as part of the Galloping Goose Regional Trail — one of Victoria's most-used active transportation corridors. The original lift section, once manually raised to let boats through, is now fixed in a raised position, with the adjacent sections inclined up to meet it. This allows smaller vessels to pass underneath, though the days of tall ships requesting passage — and two CRD workers showing up to crank the plank by hand — are largely behind it.",
           "tip": "Stop mid-span for the best view of the Gorge.",
-          "r": 70
+          "r": 70,
+          "depart": "Head south down the goose to continue."
         }
       ],
       "legs": [
-        "Welcome to Gorge & The Goose — the longest loop at about 14 km, and almost all flat rail-trail. Roll out toward the harbour.",
-        "Approaching the Johnson Street Bridge — this bright-blue lifting bridge replaced a 1924 span that locals also called 'Big Blue'.",
-        "You're now on the Galloping Goose, a rail-trail built on a 1920s railway that once ran all the way to Sooke. The art wall is just ahead.",
-        "Riding along the Gorge Waterway — a century ago this tidal inlet was lined with swimming spots, boathouses and tea gardens.",
-        "Nearing Tillicum Narrows and the reversing falls — as the tide shifts, the saltwater rapids actually flow backward.",
-        "Cruising toward Bamfield Park's dock, a quiet pocket of waterfront and a favourite kayak launch.",
-        "Final landmark: the Selkirk Trestle, a huge restored wooden railway bridge you ride straight across before looping back."
+        "Welcome to the Gorge & The Goose Tour — the longest route at about 14 km, and mostly all flat, uninterrupted riding paths. Easy riding ahead!",
+        "Approaching the Johnson Street Bridge — This crossing has been a work in progress since 1855. Victoria's first attempt was a wagon bridge that blocked boat traffic — so they tore it down and ran a ferry instead. A railway swing bridge followed in 1888, then the iconic 'Blue Bridge' in 1924, designed by the same engineer behind the Golden Gate. After a repaint in 1979 using Victoria's own lamppost blue, the name stuck. It served the city for nearly 100 years before giving way to what you see today — opened in 2018, with those blue LEDs keeping the memory alive.",
+        "Up next is the Trackside Art Wall - What you're looking at has been a battleground — in the best possible way.\nArtists have been painting these warehouse walls since the 1980s, with no permission, no pay, and no curator. For years it was a legal grey zone, caught between police crackdowns and a community that kept showing up anyway. Eventually, the community won. Today the Trackside is a legalized free wall — one of Canada's largest graffiti corridors — backed by the Township of Esquimalt, the City of Victoria, and the BC Arts Council. Every piece you see was painted voluntarily, and most will eventually be painted over. That's the nature of the place. It's living art.",
+        "Next stop, Richards Island - The little island you're looking at out in the harbour has a straightforward name with a layered history.\nRichards Island is named after a Royal Navy lieutenant posted here in the 1840s — one of dozens of local features still carrying the names of officers from HMS Fisgard, Britain's early presence in these waters. You can only reach it by paddle craft, and there's not much on it but rock, Garry oak, and sea air.\nBut the beach just behind you tells a deeper story. A storm once exposed a shell midden in the cove — evidence that people were living and gathering here more than 5,000 years ago. The British named the island. The land remembers much more.",
+        "Welcome to The Gorgeous Gorge - The water you've been riding along has carried a lot of history.\nFor thousands of years, the local indigenous peoples fished these channels — salmon, herring, trout — using weir traps woven right into the current. Then the British arrived, the Hudsons Bay Company set up Fort Victoria, and within decades the Gorge was ringed with sawmills, shipyards, and ironworks. For a time, Victoria was the busiest seaport north of San Francisco. The pollution that followed nearly killed the waterway. By the 1940s it was badly degraded — and it stayed that way for decades.\nThe recovery started in 1994 with two people picking up garbage. That's not a metaphor — a father and son just started cleaning, and others joined. Today the herons are back, the salmon are returning, and the Gorge is quietly becoming itself again.",
+        "Cruising toward Bamfield Park's dock, a quiet pocket of waterfront and a favourite kayak launch. Are you gonna take a dip?",
+        "Here we have Selkirk Trestle - what used to be a working railway bridge — built between 1916 and 1919 by the Canadian National Railway, and used to haul logs to the sawmills that once lined these shores.\nWhen rail traffic stopped, the trestle was converted into a trail crossing rather than demolished, and it became part of the Galloping Goose Regional Trail. The old lift section in the middle — once hand-cranked by two CRD workers whenever a tall boat needed through — is now fixed up permanently, with the rest of the deck sloping up to meet it. Three hundred metres of fir and hemlock, still standing. Just being used differently now."
       ],
       "qa": [
         {
