@@ -60,14 +60,16 @@
   .recenter{position:absolute;left:12px;top:12px;z-index:20;border:none;border-radius:999px;background:#fff;box-shadow:var(--shadow);
     padding:8px 12px;font-size:12.5px;font-weight:700;color:#333;cursor:pointer;display:flex;align-items:center;gap:6px}
   .attr{position:absolute;left:6px;bottom:3px;font-size:9px;color:#5b6472;background:rgba(255,255,255,.7);padding:1px 5px;border-radius:4px;z-index:15}
-  .ai-fab{position:absolute;right:12px;bottom:14px;z-index:26;background:var(--ink);color:#fff;border:none;border-radius:999px;padding:11px 15px;font-weight:700;font-size:13.5px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;gap:7px}
+  .ai-fab{position:absolute;right:12px;bottom:14px;z-index:26;background:#fff;color:#2b3340;border:none;border-radius:12px;width:44px;height:44px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .ai-fab svg{width:22px;height:22px}
   .btn.endbtn{background:#d64545;color:#fff}
   .reroute-fab{position:absolute;left:50%;transform:translateX(-50%);bottom:70px;z-index:27;background:#e8590c;color:#fff;border:none;border-radius:999px;padding:11px 16px;font-weight:800;font-size:13.5px;box-shadow:var(--shadow);cursor:pointer;display:none;align-items:center;gap:6px}
   .ai-fab-picker{position:fixed;right:16px;bottom:18px;z-index:85;background:var(--ink);color:#fff;border:none;border-radius:999px;padding:13px 18px;font-weight:700;font-size:14px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;gap:7px}
   /* live position */
-  .me-dot{position:absolute;pointer-events:none;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;background:#1e90ff;border:3px solid #fff;box-shadow:0 0 0 2px rgba(30,144,255,.5),0 2px 6px rgba(0,0,0,.4);z-index:8;transition:transform .25s ease}
-  .me-dot::after{content:"";position:absolute;inset:-9px;border-radius:50%;background:rgba(30,144,255,.25);animation:pulse 1.6s ease-out infinite}
-  .me-dot.hasdir::before{content:"";position:absolute;left:50%;top:-13px;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:11px solid #1e90ff;filter:drop-shadow(0 -1px 1px rgba(0,0,0,.25))}
+  .me-dot{position:absolute;pointer-events:none;transform:translate(-50%,-50%);width:34px;height:34px;z-index:8;transition:transform .25s ease}
+  .me-dot::after{content:"";position:absolute;inset:-6px;border-radius:50%;background:rgba(30,144,255,.18);animation:pulse 1.6s ease-out infinite}
+  .me-dot.hasdir::before{content:"";position:absolute;left:50%;top:-11px;transform:translateX(-50%);width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:12px solid #1e90ff;filter:drop-shadow(0 -1px 1px rgba(0,0,0,.25))}
+  .me-puck{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#fff;border:2.5px solid #1e90ff;box-shadow:0 2px 6px rgba(0,0,0,.35);font-size:18px;line-height:1}
   @keyframes pulse{0%{transform:scale(.4);opacity:.8}100%{transform:scale(1.6);opacity:0}}
   /* live controls */
   .livebar{position:absolute;left:12px;bottom:12px;z-index:20;pointer-events:none}
@@ -210,11 +212,10 @@
     <div class="livebar">
       <div class="livebtns">
         <button class="lbtn icon" id="wholeBtn" title="Whole route" aria-label="Whole route"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5"/><path d="M4 4l6.5 6.5"/><path d="M15 4h5v5"/><path d="M20 4l-6.5 6.5"/><path d="M9 20H4v-5"/><path d="M4 20l6.5-6.5"/><path d="M15 20h5v-5"/><path d="M20 20l-6.5-6.5"/></svg></button>
-        <button class="lbtn icon locate" id="gpsBtn" title="Center on my location" aria-label="My location"><svg viewBox="0 0 24 24"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.9-3.1-7-7-7zm0 9.6A2.6 2.6 0 1112 6.4a2.6 2.6 0 010 5.2z" fill="currentColor"/></svg></button>
         <button class="lbtn icon" id="voiceBtn" title="Voice guide" aria-label="Voice guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.6L13 19V5L7.6 9.5H4z" fill="currentColor" stroke="none"/><path d="M16.4 8.8a4.6 4.6 0 010 6.4"/><path d="M19 6.3a8 8 0 010 11.4"/></svg></button>
       </div>
     </div>
-    <button class="ai-fab" id="askBtn">💬 Guide</button>
+    <button class="ai-fab" id="askBtn" title="Ask the Guide" aria-label="Ask the Guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-8.5 8.5 8.5 8.5 0 01-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 014 11.5 8.5 8.5 0 0112.5 3 8.38 8.38 0 0121 11.5z"/></svg></button>
     <div class="attr">© OpenStreetMap</div>
   </div>
   <div class="sheet">
@@ -534,11 +535,12 @@ function render(){
     markersEl.appendChild(d);
   });
   if(me){
-    if(!meDot){ meDot=document.createElement('div'); meDot.className='me-dot'; scene.appendChild(meDot); }
+    if(!meDot){ meDot=document.createElement('div'); meDot.className='me-dot'; meDot.innerHTML='<span class="me-puck">🛴</span>'; scene.appendChild(meDot); }
     const mx=lonToWX(dlon,z)-originX, my=latToWY(dlat,z)-originY;
     const hdg = rotateOn ? mapHeading : (riderHeading==null?0:riderHeading);  // arrow points to travel direction on screen
     meDot.style.left=mx+'px'; meDot.style.top=my+'px';
     meDot.style.transform=`translate(-50%,-50%) rotate(${hdg}deg)`;
+    const _pk=meDot.firstChild; if(_pk) _pk.style.transform=`rotate(${mapHeading-hdg}deg)`;   // keep the scooter upright
     meDot.classList.toggle('hasdir', riderHeading!=null);
     meDot.style.display='block';
   } else if(meDot){ meDot.style.display='none'; }
@@ -611,7 +613,15 @@ function setZoom(z){state.z=Math.max(11,Math.min(19,z));render();}
 document.getElementById('zin').onclick=()=>setZoom(state.z+1);
 document.getElementById('zout').onclick=()=>setZoom(state.z-1);
 // "Whole route" — north-up overview of the entire loop
-document.getElementById('wholeBtn').onclick=()=>{ follow=false; rotateOn=false; mapHeading=0; fitWhole(); };
+let showingWhole=false;
+const ICON_WHOLE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5"/><path d="M4 4l6.5 6.5"/><path d="M15 4h5v5"/><path d="M20 4l-6.5 6.5"/><path d="M9 20H4v-5"/><path d="M4 20l6.5-6.5"/><path d="M15 20h5v-5"/><path d="M20 20l-6.5-6.5"/></svg>';
+const ICON_RECENTER='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/></svg>';
+function setWholeIcon(){ const b=document.getElementById('wholeBtn'); if(!b)return; b.innerHTML=showingWhole?ICON_RECENTER:ICON_WHOLE; b.title=showingWhole?'Recenter on me':'Show whole route'; }
+document.getElementById('wholeBtn').onclick=()=>{
+  if(showingWhole){ showingWhole=false; rotateOn=true; follow=true; if(riderHeading!=null) mapHeading=riderHeading; if(me){ state.z=Math.max(state.z,16); panToLatLon(me.lat,me.lon); } else locateMe(); }
+  else { showingWhole=true; follow=false; rotateOn=false; mapHeading=0; fitWhole(); }
+  setWholeIcon();
+};
 
 /* drag handles to resize panel vs map — grab (portrait, vertical) / vgrab (landscape, horizontal) */
 const appEl=document.getElementById('app');
@@ -689,17 +699,34 @@ function pickVoice(){
   pool.sort((a,b)=>score(b)-score(a)); preferredVoice=pool[0]||null;
 }
 if('speechSynthesis'in window){ try{ pickVoice(); speechSynthesis.onvoiceschanged=pickVoice; }catch(e){} }
-function speak(t,type,force){ if((!voiceOn&&!force)||!('speechSynthesis'in window)||!t)return;
-  const item={t,type:type||'normal'};
+function speak(t,type,force,onDone){ if((!voiceOn&&!force)||!('speechSynthesis'in window)||!t){ if(onDone) onDone(); return; }
+  const item={t,type:type||'normal',onDone};
   if(type==='turn'){ let i=0; while(i<speechQ.length && speechQ[i].type==='turn') i++; speechQ.splice(i,0,item); }  // turns jump ahead of queued stop blurbs
   else speechQ.push(item);
   pumpSpeech();
 }
 function pumpSpeech(){ if(speaking||!speechQ.length) return; const it=speechQ.shift(); speaking=true;
-  try{ const u=new SpeechSynthesisUtterance(cleanForSpeech(it.t)); if(!preferredVoice) pickVoice(); if(preferredVoice){ u.voice=preferredVoice; u.lang=preferredVoice.lang||'en-US'; } u.rate=GUIDE_RATE||1; u.pitch=1.0; u.onend=()=>{ speaking=false; pumpSpeech(); }; u.onerror=()=>{ speaking=false; pumpSpeech(); }; speechSynthesis.speak(u); }
+  try{ const u=new SpeechSynthesisUtterance(cleanForSpeech(it.t)); if(!preferredVoice) pickVoice(); if(preferredVoice){ u.voice=preferredVoice; u.lang=preferredVoice.lang||'en-US'; } u.rate=GUIDE_RATE||1; u.pitch=1.0; u.onend=()=>{ speaking=false; if(it.onDone){ try{it.onDone();}catch(e){} } pumpSpeech(); }; u.onerror=()=>{ speaking=false; if(it.onDone){ try{it.onDone();}catch(e){} } pumpSpeech(); }; speechSynthesis.speak(u); }
   catch(e){ speaking=false; }
 }
-function stopSpeech(){ speechQ=[]; speaking=false; if('speechSynthesis'in window) speechSynthesis.cancel(); }
+function stopSpeech(){ speechQ=[]; speaking=false; if('speechSynthesis'in window) speechSynthesis.cancel(); stopAudio(); }
+let narrAudio=null;
+function playStopAudio(src,onEnd,onErr){
+  try{
+    if(!narrAudio) narrAudio=new Audio();
+    narrAudio.pause(); narrAudio.onended=null; narrAudio.onerror=null; narrAudio.src=src;
+    narrAudio.onended=()=>{ if(onEnd) onEnd(); };
+    narrAudio.onerror=()=>{ if(onErr) onErr(); };
+    const pr=narrAudio.play(); if(pr&&pr.catch) pr.catch(()=>{ if(onErr) onErr(); });
+  }catch(e){ if(onErr) onErr(); }
+}
+function stopAudio(){ if(narrAudio){ try{ narrAudio.pause(); }catch(e){} } }
+function playSeg(seg,onDone){
+  const hasText = seg && seg.text && String(seg.text).trim();
+  if(!seg || seg.off || !voiceOn || (!seg.audio && !hasText)){ if(onDone) onDone(); return; }
+  if(seg.audio){ playStopAudio(seg.audio, onDone, ()=>{ if(hasText) speak(seg.text,'stop',false,onDone); else if(onDone) onDone(); }); return; }
+  speak(seg.text,'stop',false,onDone);
+}
 function resetProgress(){reached=new Set();nextStop=0;cur=0;skipping=false;renderPanel();}
 const COMPASS8=['north','north-east','east','south-east','south','south-west','west','north-west'];
 function cardinal(b){ return COMPASS8[Math.round((((b%360)+360)%360)/45)%8]; }
@@ -723,6 +750,7 @@ function departCue(p){
 }
 function showNextCue(){
   const el=document.getElementById('nextCue'); if(!el) return;
+  const _s=stopAt(cur); if(_s && _s.departOff){ el.style.display='none'; return; }
   const cue=departCue(cur);
   el.textContent = cue ? '✅ '+cue : '🎉 You’ve reached the last stop — tap Finish when you’re done.';
   el.style.display='block';
@@ -741,10 +769,11 @@ async function speakArrival(p){
   if(aiMode()!=='off' && GUIDE_LIVE_NARRATION && !narrationCache[key]){
     try{ text=await claudeRequest(narrationSystem(),[{role:'user',content:narrationUser(p)}],240); narrationCache[key]=text; if(cur===p) $('desc').textContent=text; }catch(e){}
   }
-  if(voiceOn){
-    const cue=departCue(p);
-    speak(text + ' …' + (cue || 'You’ve reached the last stop.'), 'stop');
-  }
+  if(!voiceOn) return;
+  const start=(p===0 && order[p]===hubIdx);
+  const narr={ audio: start ? s.startAudio : s.audio, text: text, off: start ? !!s.startOff : false };
+  const cue ={ audio: s.departAudio, text: departCue(p), off: !!s.departOff };
+  playSeg(narr, ()=> playSeg(cue));
 }
 // rider leaves a stop (or taps Next): switch focus to the next target — but DON'T narrate until they arrive there
 function goEnroute(){
@@ -909,7 +938,7 @@ function updatePosition(lat,lon,acc){
   if(previewing) return;                       // preview is manual step-through; just show the live dot
   if(returningToHub){                          // tour over, guiding back to the Zoomr Zone
     const hub=DATA.stops[hubIdx], d=haversine(lat,lon,hub.lat,hub.lon);
-    if(d < (hub._r||ARRIVE)){ returningToHub=false; const _em=(hub.endMsg&&String(hub.endMsg).trim())?hub.endMsg:''; if(_em){ $('desc').textContent=_em; if(voiceOn) speak(_em,'stop'); } expandSheet(); setStatus('🏁 Back at the Start / Finish Zone — end your rental in the Revii app'); return; }
+    if(d < (hub._r||ARRIVE)){ returningToHub=false; if(!hub.endOff){ const _et=(hub.endMsg&&String(hub.endMsg).trim())?hub.endMsg:''; if(_et) $('desc').textContent=_et; playSeg({audio:hub.endAudio, text:_et}); } expandSheet(); setStatus('🏁 Back at the Start / Finish Zone — end your rental in the Revii app'); return; }
     setStatus('🔚 Back to '+hub.name+' · '+fmt(d)); return;
   }
   const s0=stopAt(0), d0=haversine(lat,lon,s0.lat,s0.lon);
@@ -978,10 +1007,9 @@ function setStartCta(show,mode){
   updatePrimary();
 }
 function updatePrimary(){
-  const b=document.getElementById('primaryBtn'); if(!b) return;
-  if(touring || returningToHub){ b.textContent='✕ End Tour'; b.classList.add('endbtn'); }
-  else if(headingToStart){ b.textContent='Guide me to the start ›'; b.classList.remove('endbtn'); }
-  else { b.textContent='▶ Start Tour'; b.classList.remove('endbtn'); }
+  const b=document.getElementById('primaryBtn'), e=document.getElementById('endNowBtn'); const live=(touring||returningToHub);
+  if(b){ if(live){ b.style.display='none'; } else { b.style.display='block'; b.classList.remove('endbtn'); b.textContent=headingToStart?'Guide me to the start ›':'▶ Start Tour'; } }
+  if(e){ e.style.display=live?'block':'none'; e.textContent='✕ End Tour'; e.classList.add('endbtn'); }
 }
 function endTourNow(){ if(confirm('End the tour and return to the tour list?')){ clearLive(); showPicker(); } }
 function beginTour(){
@@ -1009,7 +1037,7 @@ function returnToHub(){
 }
 document.getElementById('endReturnBtn').onclick=returnToHub;
 document.getElementById('endTourBtn').onclick=()=>{ closeEnd(); showPicker(); };
-document.getElementById('endNowBtn').onclick=showPicker;
+document.getElementById('endNowBtn').onclick=endTourNow;
 document.getElementById('endX').onclick=closeEnd;
 document.getElementById('endModal').onclick=e=>{ if(e.target.id==='endModal') closeEnd(); };
 document.getElementById('wcNext').onclick=()=>{ const n=document.querySelectorAll('#wcPages .wc-page').length; if(wcPage>=n-1) closeWelcome(); else wcShow(wcPage+1); };
@@ -1101,7 +1129,7 @@ function startGPS(){
   if(watchId!=null) return true;                          // already running
   if(!('geolocation'in navigator)){ setStatus('Open in your browser for live GPS', true, true); maybeShowGpsBanner(true); return false; }
   if(window.isSecureContext===false){ setStatus('Open in your browser for live GPS', true, true); maybeShowGpsBanner(true); return false; }
-  btn.classList.add('on'); setStatus('Locating…'); enableCompass();   // acquire location + compass heading
+  if(btn) btn.classList.add('on'); setStatus('Locating…'); enableCompass();   // acquire location + compass heading
   watchId=navigator.geolocation.watchPosition(
     p=>{ const c=p.coords, la=c.latitude, lo=c.longitude;
          if(c.speed!=null && !isNaN(c.speed)) lastSpeed=c.speed;
@@ -1134,8 +1162,11 @@ function locateMe(){
 }
 
 document.getElementById('previewEndBtn').onclick=exitPreview;
-document.getElementById('gpsBtn').onclick=locateMe;
-document.getElementById('voiceBtn').onclick=function(){ voiceOn=!voiceOn; this.classList.toggle('on',voiceOn); if(voiceOn){speak('Voice guide on.');} else stopSpeech(); };
+const ICON_VOICE_ON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.6L13 19V5L7.6 9.5H4z" fill="currentColor" stroke="none"/><path d="M16.4 8.8a4.6 4.6 0 010 6.4"/><path d="M19 6.3a8 8 0 010 11.4"/></svg>';
+const ICON_VOICE_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.6L13 19V5L7.6 9.5H4z" fill="currentColor" stroke="none"/><path d="M16.5 9.5l5 5"/><path d="M21.5 9.5l-5 5"/></svg>';
+function setVoiceIcon(){ const b=document.getElementById('voiceBtn'); if(!b)return; b.classList.toggle('on',voiceOn); b.innerHTML=voiceOn?ICON_VOICE_ON:ICON_VOICE_OFF; b.title=voiceOn?'Voice on':'Voice muted'; }
+document.getElementById('voiceBtn').onclick=function(){ voiceOn=!voiceOn; if(voiceOn){speak('Voice guide on.');} else stopSpeech(); setVoiceIcon(); };
+setVoiceIcon();
 
 /* ---------- Tour panel (independent of map) ---------- */
 let cur=0;const $=id=>document.getElementById(id);
@@ -1366,7 +1397,7 @@ function buildCards(){
   });
 }
 function clearLive(){
-  if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null;document.getElementById('gpsBtn').classList.remove('on');}
+  if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null;const _g=document.getElementById('gpsBtn'); if(_g)_g.classList.remove('on');}
   stopSpeech();
   me=null; if(meDot){meDot.style.display='none';} follow=false;
   rotateOn=false; mapHeading=0; riderHeading=null; lastPos=null; gpsHeading=null; compassHeading=null; lastSpeed=0;
@@ -1375,6 +1406,7 @@ function clearLive(){
   reached=new Set(); nextStop=0; cur=0;
   touring=false; headingToStart=false; previewing=false; skipping=false; returningToHub=false; phase='enroute';
   recovering=false; recoveryRoute=null; recMan=[]; recoveryMode='path'; recTargetIdx=-1; rerouteOptedOut=false; rerouteFetching=false; updateRerouteBtn(false);
+  showingWhole=false; if(typeof setWholeIcon==='function') setWholeIcon();
   document.getElementById('endNowBtn').style.display='none';
   const _nc=document.getElementById('nextCue'); if(_nc) _nc.style.display='none';
   document.getElementById('status').style.display='none';
