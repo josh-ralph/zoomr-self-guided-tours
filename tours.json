@@ -4643,7 +4643,8 @@
           "emoji": "🎨",
           "tagline": "Open-air street-art gallery",
           "desc": "Along the old rail corridor, the Trackside Art Wall is a rotating canvas of legal graffiti and murals — one of the city's best free art stops.",
-          "tip": "Great photo backdrop; the murals change often."
+          "tip": "Great photo backdrop; the murals change often.",
+          "r": 115
         },
         {
           "name": "Richards Island Viewpoint",
@@ -4652,7 +4653,8 @@
           "emoji": "🏝️",
           "tagline": "Tidal inlet & heron habitat",
           "desc": "Richards Island viewpoint looks out over the Gorge Waterway, a tidal inlet that was Victoria's first summer playground. Watch for herons, otters and paddlers.",
-          "tip": "Look for the current — the whole inlet is tidal."
+          "tip": "Look for the current — the whole inlet is tidal.",
+          "r": 70
         },
         {
           "name": "Gorgeous Gorge",
@@ -4670,16 +4672,18 @@
           "emoji": "🛶",
           "tagline": "Quiet waterfront dock",
           "desc": "Bamfield Park's little dock is a calm rest stop and a popular kayak launch tucked along the Gorge.",
-          "tip": "Good spot to stretch and refill before the trestle."
+          "tip": "Good spot to stretch and refill before the trestle.",
+          "r": 50
         },
         {
           "name": "Selkirk Trestle",
-          "lat": 48.439095,
-          "lon": -123.382659,
+          "lat": 48.438547,
+          "lon": -123.382881,
           "emoji": "🚂",
           "tagline": "Historic wooden trestle",
           "desc": "The Selkirk Trestle is one of Canada's longest wooden rail trestles, now a walking-and-cycling bridge you ride right across the water.",
-          "tip": "Stop mid-span for the best view of the Gorge."
+          "tip": "Stop mid-span for the best view of the Gorge.",
+          "r": 70
         }
       ],
       "legs": [
