@@ -1464,6 +1464,8 @@ function closeWelcome(){ document.getElementById('welcomeModal').classList.remov
 function maybeWelcome(){ let seen=false; try{ seen=localStorage.getItem('zoomrWelcomed')==='1'; }catch(e){} if(!seen) showWelcome(); }
 // load editable tour data; fall back to the embedded copy (offline / file://)
 fetch('tours.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{ const arr=Array.isArray(d)?d:(d&&Array.isArray(d.tours)?d.tours:null); if(arr&&arr.length){ TOURS=arr; DATA=TOURS[0]; } if(d&&!Array.isArray(d)&&d.config) applyGuideConfig(d.config); }).catch(()=>{}).finally(initApp);
+/* offline caching — https only, no manifest (stays a website, not an installable app) */
+if('serviceWorker' in navigator && location.protocol==='https:'){ window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
 // Test-bench (admin only): receive previewed data + simulation commands via postMessage
 let simTimer=null, simDist=0, simSpeedKmh=20, simLastPos=null, simTotal=0;
 function simPosAt(dist){ const R=DATA.route; let acc=0; for(let i=1;i<R.length;i++){ const d=haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); if(acc+d>=dist){ const t=(dist-acc)/(d||1); return {lat:R[i-1][0]+(R[i][0]-R[i-1][0])*t, lon:R[i-1][1]+(R[i][1]-R[i-1][1])*t, done:false}; } acc+=d; } const last=R[R.length-1]; return {lat:last[0],lon:last[1],done:true}; }
