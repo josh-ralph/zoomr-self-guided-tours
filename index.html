@@ -510,9 +510,8 @@ function render(){
   for(const key in tileCache){
     const im=tileCache[key], ff=2**(z-im._tz), w=TS*ff;
     im.style.left=(im._wx*ff-originX)+'px'; im.style.top=(im._wy*ff-originY)+'px'; im.style.width=w+'px'; im.style.height=w+'px';
-    if(need.has(key)){ im.style.zIndex='2'; }
-    else if(im._tz===tz || allLoaded){ im.remove(); delete tileCache[key]; }   // same-zoom out of view, or the new layer is ready
-    else { im.style.zIndex='1'; }                                              // hold as fallback while new tiles load in
+    if(!need.has(key) && (im._tz===tz || allLoaded)){ im.remove(); delete tileCache[key]; }
+    // else: needed tile, or an old-zoom fallback kept underneath (new tiles are appended later in the DOM, so they layer on top)
   }
   const pts=DATA.route.map(([la,lo])=>`${(lonToWX(lo,z)-originX).toFixed(1)},${(latToWY(la,z)-originY).toFixed(1)}`).join(' ');
   svg.setAttribute('width',D); svg.setAttribute('height',D);
