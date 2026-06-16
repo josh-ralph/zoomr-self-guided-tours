@@ -45,7 +45,7 @@
   .pill{font-size:12px;font-weight:700;background:rgba(14,154,167,.12);color:var(--orange);padding:5px 10px;border-radius:999px}
   /* MAP */
   #mapwrap{position:relative;flex:1;overflow:hidden;background:#aadaff;touch-action:none}
-  #scene{position:absolute;inset:0;transform-origin:center center;will-change:transform;transition:transform .25s ease}
+  #scene{position:absolute;inset:0;transform-origin:center center;will-change:transform}
   #tiles{position:absolute;inset:0}
   #tiles img{position:absolute;width:256px;height:256px;user-select:none;-webkit-user-drag:none;pointer-events:none;opacity:0;transition:opacity .35s ease}
   #overlay{position:absolute;inset:0;pointer-events:none}
@@ -411,9 +411,10 @@ function navTick(ts){
   const moving = Math.abs(dLat)>1.4e-7 || Math.abs(dLon)>1.4e-7;
   if(moving){ dispLat+=dLat*0.16; dispLon+=dLon*0.16; } else { dispLat=me.lat; dispLon=me.lon; }
   let turning=false;
-  if(rotateOn && riderHeading!=null && Math.abs(((riderHeading-mapHeading+540)%360)-180)>0.6){ mapHeading=riderHeading; turning=true; }
+  if(rotateOn && riderHeading!=null){ const diff=((riderHeading-mapHeading+540)%360)-180; if(Math.abs(diff)>0.25){ mapHeading=((mapHeading+diff*0.2)%360+360)%360; turning=true; } }
   if(follow){ state.cLat=dispLat; state.cLon=dispLon; }
-  if((moving||turning||first) && ts-lastNavRender>28){ lastNavRender=ts; render(); }   // ~30fps while moving/turning
+  if(turning) sceneTransform(1);                                                       // smooth rotation every frame (cheap)
+  if((moving||first) && ts-lastNavRender>28){ lastNavRender=ts; render(); }            // tiles follow position (throttled)
   if(moving||turning) startNav();
 }
 function onOrient(e){
@@ -483,28 +484,36 @@ function render(){
   scene.style.width=D+'px'; scene.style.height=D+'px'; scene.style.transformOrigin='50% 50%';
   sceneTransform(1);
   const cWX=lonToWX(state.cLon,z),cWY=latToWY(state.cLat,z);
-  const originX=cWX-D/2, originY=cWY-D/2;             // world px at scene top-left
-  const n=2**z;
-  const x0=Math.floor(originX/TS)-1, x1=Math.floor((originX+D)/TS)+1;
-  const y0=Math.floor(originY/TS)-1, y1=Math.floor((originY+D)/TS)+1;
+  const originX=cWX-D/2, originY=cWY-D/2;             // world px at scene top-left (fractional zoom z)
+  const tz=Math.max(11,Math.min(19,Math.round(z))), f=2**(z-tz), TSf=TS*f, n=2**tz;   // tiles at integer tz, scaled to z
+  const x0=Math.floor(originX/TSf)-1, x1=Math.floor((originX+D)/TSf)+1;
+  const y0=Math.floor(originY/TSf)-1, y1=Math.floor((originY+D)/TSf)+1;
   const need=new Set();
   for(let x=x0;x<=x1;x++) for(let y=y0;y<=y1;y++){
     if(y<0||y>=n) continue;
     const tx=((x%n)+n)%n;
-    const key=z+'/'+tx+'/'+y;
+    const key=tz+'/'+tx+'/'+y;
     need.add(key);
-    const left=x*TS-originX, top=y*TS-originY;
     let img=tileCache[key];
     if(!img){
       img=document.createElement('img');
-      img.onload=function(){this.style.opacity=1;};
-      img.onerror=function(){this.style.visibility='hidden';};
-      img.src=TILE_URL({z,x:tx,y});
+      img._tz=tz; img._wx=x*TS; img._wy=y*TS; img._loaded=false;   // remember its zoom + world position
+      img.onload=function(){ this._loaded=true; this.style.opacity=1; };
+      img.onerror=function(){ this._loaded=true; this.style.visibility='hidden'; };
+      img.src=TILE_URL({z:tz,x:tx,y});
       tileCache[key]=img; tilesEl.appendChild(img);
     }
-    img.style.left=left+'px'; img.style.top=top+'px';
   }
-  for(const key in tileCache){ if(!need.has(key)){ tileCache[key].remove(); delete tileCache[key]; } }
+  // have all the current-zoom tiles painted yet?
+  let allLoaded=true; for(const k of need){ const im=tileCache[k]; if(!im||!im._loaded){ allLoaded=false; break; } }
+  // position every cached tile in the live fractional-zoom world; keep the old zoom layer underneath until the new one is ready
+  for(const key in tileCache){
+    const im=tileCache[key], ff=2**(z-im._tz), w=TS*ff;
+    im.style.left=(im._wx*ff-originX)+'px'; im.style.top=(im._wy*ff-originY)+'px'; im.style.width=w+'px'; im.style.height=w+'px';
+    if(need.has(key)){ im.style.zIndex='2'; }
+    else if(im._tz===tz || allLoaded){ im.remove(); delete tileCache[key]; }   // same-zoom out of view, or the new layer is ready
+    else { im.style.zIndex='1'; }                                              // hold as fallback while new tiles load in
+  }
   const pts=DATA.route.map(([la,lo])=>`${(lonToWX(lo,z)-originX).toFixed(1)},${(latToWY(la,z)-originY).toFixed(1)}`).join(' ');
   svg.setAttribute('width',D); svg.setAttribute('height',D);
   const dlat=(dispLat!=null?dispLat:(me?me.lat:0)), dlon=(dispLon!=null?dispLon:(me?me.lon:0));
@@ -573,7 +582,6 @@ wrap.addEventListener('pointerdown',e=>{
   if(pointers.size>=2){
     drag=null; const p=[...pointers.values()];
     g2={ z0:state.z, scale:1, A:screenToWorld(p[0].x,p[0].y), B:screenToWorld(p[1].x,p[1].y) };
-    scene.style.transition='none';
   } else {
     drag={x:e.clientX,y:e.clientY,cWX:lonToWX(state.cLon,state.z),cWY:latToWY(state.cLat,state.z)};
     try{wrap.setPointerCapture(e.pointerId);}catch(_){}
@@ -588,9 +596,12 @@ wrap.addEventListener('pointermove',e=>{
     const s=(Math.hypot(dS[0],dS[1])||1)/(Math.hypot(dW[0],dW[1])||1);
     const hp=(Math.atan2(dW[1],dW[0])-Math.atan2(dS[1],dS[0]))*180/Math.PI;   // solve heading from finger spread
     mapHeading=((hp%360)+360)%360;
-    const [rx,ry]=ROT(a1[0]/s, a1[1]/s, mapHeading);             // center so finger 0's geo stays under it
-    state.cLon=wxToLon(g2.A[0]-rx,state.z); state.cLat=wyToLat(g2.A[1]-ry,state.z);
-    render(); scene.style.transform=`rotate(${-mapHeading}deg) scale(${s})`; g2.scale=s;
+    const nz=Math.max(11,Math.min(19, g2.z0 + Math.log2(s||1)));   // fractional zoom — no snapping
+    state.z=nz; g2.scale=s;
+    const lonA=wxToLon(g2.A[0],g2.z0), latA=wyToLat(g2.A[1],g2.z0);
+    const [rx,ry]=ROT(a1[0], a1[1], mapHeading);                   // keep finger 0's geo under finger 0
+    state.cLon=wxToLon(lonToWX(lonA,nz)-rx,nz); state.cLat=wyToLat(latToWY(latA,nz)-ry,nz);
+    render();
     return;
   }
   if(!drag) return;
@@ -599,19 +610,19 @@ wrap.addEventListener('pointermove',e=>{
 });
 function endPointer(e){
   pointers.delete(e.pointerId);
-  if(g2 && pointers.size<2){
-    const nz=Math.max(11,Math.min(19,Math.round(g2.z0+Math.log2(g2.scale||1))));
-    g2=null; scene.style.transition=''; state.z=nz; render();
-  }
+  if(g2 && pointers.size<2) g2=null;     // keep the fractional zoom you ended on
   if(pointers.size===0) drag=null;
 }
 wrap.addEventListener('pointerup',endPointer);
 wrap.addEventListener('pointercancel',endPointer);
 /* wheel zoom (desktop) — anchored at cursor */
-wrap.addEventListener('wheel',e=>{e.preventDefault();zoomAround(e.clientX,e.clientY,state.z+(e.deltaY<0?1:-1));},{passive:false});
+wrap.addEventListener('wheel',e=>{e.preventDefault();zoomAround(e.clientX,e.clientY,state.z+(e.deltaY<0?0.5:-0.5));},{passive:false});
 function setZoom(z){state.z=Math.max(11,Math.min(19,z));render();}
-document.getElementById('zin').onclick=()=>setZoom(state.z+1);
-document.getElementById('zout').onclick=()=>setZoom(state.z-1);
+let zoomAnim=null;
+function zoomTo(target){ target=Math.max(11,Math.min(19,target)); if(zoomAnim) cancelAnimationFrame(zoomAnim); const from=state.z, t0=performance.now(), dur=230;
+  const step=now=>{ let k=Math.min(1,(now-t0)/dur); const e=1-Math.pow(1-k,3); state.z=from+(target-from)*e; render(); if(k<1) zoomAnim=requestAnimationFrame(step); else zoomAnim=null; }; zoomAnim=requestAnimationFrame(step); }
+document.getElementById('zin').onclick=()=>{ follow=false; zoomTo(Math.round(state.z)+1); };
+document.getElementById('zout').onclick=()=>{ follow=false; zoomTo(Math.round(state.z)-1); };
 // "Whole route" — north-up overview of the entire loop
 let showingWhole=false;
 const ICON_WHOLE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5"/><path d="M4 4l6.5 6.5"/><path d="M15 4h5v5"/><path d="M20 4l-6.5 6.5"/><path d="M9 20H4v-5"/><path d="M4 20l6.5-6.5"/><path d="M15 20h5v-5"/><path d="M20 20l-6.5-6.5"/></svg>';
