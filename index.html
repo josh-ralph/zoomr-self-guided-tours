@@ -1277,7 +1277,8 @@ function buildSystemPrompt(){
   const rules=`\n\nHOW TO ANSWER:\n`
     +`- Safety first: the rider may be on or near a moving scooter. Never encourage them to look at their phone or read while riding — if something needs their attention, tell them to pull over somewhere safe and stop first. Remind them helmets are mandatory and to follow the rules of the road when relevant.\n`
     +`- Ground every answer in the REFERENCE KNOWLEDGE and the tour stop info below. If something isn't covered there and you're not sure, say so briefly rather than inventing details.\n`
-    +`- For anything about prices, passes, refunds, account issues, exact hours, or live availability, give what the reference says but tell them to confirm in the Revii app or with Zoomr support (zoomr.ca@hotmail.com). Don't guess at numbers.\n`
+    +`- For anything about prices, passes, refunds, account issues, exact hours, or live availability, give what the reference says but tell them to confirm in the Revii app. Don't guess at numbers.\n`
+    +`- Route ALL support requests to the Revii app: any problem, billing or account question, lost item, damage, parking issue, or safety incident should be reported via the Revii app Support menu — Help, then Report an Issue. Don't suggest email or phone for support.\n`
     +`- Stay on-topic for the tour, the city, and riding Zoomr. Politely redirect if asked something unrelated.`;
   // Tour-picker (no tour started yet): help the rider choose from all tours
   if(!inTour()){
@@ -1343,14 +1344,30 @@ function greet(){ if(!body.dataset.init){
     ? `Hi! I'm your Zoomr guide for the ${DATA.tour.name} in ${DATA.tour.city}. Ask me anything about the route or the city.`
     : `Hi! I'm your Zoomr guide for Victoria, BC. Ask me about any of the tours or the city.`,'bot');
   body.dataset.init='1'; } }
-function openChat(){ modal.classList.add('open'); refreshBadge(); greet(); }
+function renderChips(){
+  const box=$('chips'); if(!box) return; box.innerHTML='';
+  const here=inTour()?stopAt(cur):null;
+  const qs = inTour()
+    ? [ here&&here.name ? 'Tell me about this stop' : 'What will I see on this tour?',
+        'Any history here?',
+        'Where is the nearest washroom?',
+        'Where can I grab a coffee?',
+        'What are the Zoomr rules?' ]
+    : [ 'Which tour is most scenic?',
+        'Which is best for families?',
+        'How much does Zoomr cost?',
+        'What are the rules for riding?',
+        'Where are the washrooms?' ];
+  qs.forEach(c=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=c; b.onclick=()=>{ send(c); }; box.appendChild(b); });
+}
+function openChat(){ modal.classList.add('open'); refreshBadge(); greet(); renderChips(); }
 $('askBtn').onclick=openChat;
 $('askBtnPicker').onclick=openChat;
 $('chatX').onclick=()=>modal.classList.remove('open');
 modal.onclick=e=>{if(e.target===modal)modal.classList.remove('open');};
 $('sendBtn').onclick=()=>{const v=$('chatInput').value;$('chatInput').value='';send(v);};
 $('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=e.target.value;e.target.value='';send(v);}});
-["Where can I eat?","Will I see any wildlife?","How long does it take?","Where are washrooms?"].forEach(c=>{const b=document.createElement('button');b.className='chip';b.textContent=c;b.onclick=()=>send(c);$('chips').appendChild(b);});
+/* suggestion chips are built by renderChips() each time the chat opens (context-aware) */
 
 /* ---------- spoken conversation (push-to-talk) ---------- */
 let recog=null, listening=false;
