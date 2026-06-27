@@ -1,6 +1,7 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="format-detection" content="telephone=no,address=no,email=no">
 <title>Zoomr Self-Guided Tours</title>
 <meta name="theme-color" content="#ffffff">
 <style>
@@ -16,7 +17,9 @@
   .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:none;cursor:pointer;
     background:var(--teal);color:#fff;font-weight:800;font-size:17px;padding:16px;border-radius:999px;text-decoration:none;margin-bottom:14px}
   .urlbox{font-size:17px;font-weight:800;color:#0c1416;background:#f1f7f8;border:1px solid rgba(58,166,184,.4);
-    border-radius:12px;padding:14px;letter-spacing:.3px;margin-bottom:12px;word-break:break-all}
+    border-radius:12px;padding:14px;letter-spacing:.3px;margin-bottom:12px;word-break:break-all;
+    pointer-events:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  .urlbox a,.urlbox *{color:#0c1416 !important;text-decoration:none !important;pointer-events:none !important}
   .steps{text-align:left;margin:18px 0 0;padding:16px;background:#f5f8f9;border:1px solid rgba(12,20,22,.1);
     border-radius:14px;font-size:14px;line-height:1.7;color:#3a484b}
   .steps b{color:#0c1416}
@@ -34,7 +37,7 @@
 
   <!-- iOS / universal: copy the link, open browser, paste -->
   <div id="copyBlock">
-    <div class="urlbox" id="urlbox">tours.zoomr.ca</div>
+    <div class="urlbox" id="urlbox">tours.zoomr&#8203;.ca</div>
     <button class="btn" id="copyBtn">Copy link</button>
     <ol class="steps" id="steps">
       <li>Tap <b>Copy link</b> above.</li>
