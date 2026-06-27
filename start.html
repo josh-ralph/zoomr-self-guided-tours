@@ -1,0 +1,84 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Zoomr Self-Guided Tours</title>
+<meta name="theme-color" content="#0c0c0c">
+<style>
+  :root{--teal:#A7DDE1}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{background:#0c0c0c;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex;align-items:center;justify-content:center;padding:26px;text-align:center}
+  .card{width:100%;max-width:420px}
+  .logo{height:60px;width:auto;margin:0 auto 16px;display:block}
+  h1{font-size:21px;margin:0 0 8px;font-weight:800}
+  p.lead{font-size:15px;line-height:1.5;color:#cfe9ed;margin:0 0 22px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:none;cursor:pointer;
+    background:var(--teal);color:#08343a;font-weight:800;font-size:17px;padding:16px;border-radius:999px;text-decoration:none;margin-bottom:14px}
+  .urlbox{font-size:17px;font-weight:800;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(167,221,225,.4);
+    border-radius:12px;padding:14px;letter-spacing:.3px;margin-bottom:12px;word-break:break-all}
+  .steps{text-align:left;margin:18px 0 0;padding:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+    border-radius:14px;font-size:14px;line-height:1.7;color:#dfeef0}
+  .steps b{color:#fff}
+  .small{display:none;margin-top:6px;background:transparent;border:1.5px solid rgba(167,221,225,.5);color:var(--teal);font-size:14px;padding:12px;font-weight:700}
+  .copied{color:#08343a !important}
+  #copyBtn.copied{background:#7fd1a8}
+</style></head><body>
+<div class="card">
+  <img class="logo" src="data:image/png;base64,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" alt="Zoomr">
+  <h1>Self-Guided Tours</h1>
+  <p class="lead" id="lead">This tour is optimized for your web browser &mdash; open it there for the full experience.</p>
+
+  <!-- Android / desktop: one-tap open -->
+  <a class="btn" id="openBtn" href="https://tours.zoomr.ca" target="_blank" rel="noopener" style="display:none">Open in browser &rsaquo;</a>
+
+  <!-- iOS / universal: copy the link, open browser, paste -->
+  <div id="copyBlock">
+    <div class="urlbox" id="urlbox">tours.zoomr.ca</div>
+    <button class="btn" id="copyBtn">Copy link</button>
+    <ol class="steps" id="steps">
+      <li>Tap <b>Copy link</b> above.</li>
+      <li>Open <b id="browserName">Safari</b>.</li>
+      <li>Tap the address bar, <b>paste</b>, and go.</li>
+    </ol>
+  </div>
+  <button class="small" id="smallCopy">Button not working? Copy the link instead</button>
+</div>
+<script>
+  var URL_APP="https://tours.zoomr.ca";
+  var ua=navigator.userAgent||"";
+  var isIOS=/iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints>1);
+  var isAndroid=/Android/.test(ua);
+
+  function copyLink(){
+    var done=function(){ var b=document.getElementById("copyBtn"); b.textContent="Copied \u2713"; b.classList.add("copied"); setTimeout(function(){b.textContent="Copy link";b.classList.remove("copied");},2200); };
+    function fb(){ var t=document.createElement("textarea"); t.value=URL_APP; t.style.position="fixed"; t.style.opacity="0"; document.body.appendChild(t); t.focus(); t.select(); try{document.execCommand("copy");done();}catch(e){} document.body.removeChild(t); }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(URL_APP).then(done,fb); } else fb();
+  }
+  document.getElementById("copyBtn").addEventListener("click",copyLink);
+  document.getElementById("smallCopy").addEventListener("click",copyLink);
+
+  if(isAndroid){
+    // Android: show the one-tap open button (force Chrome), keep copy as a fallback
+    document.getElementById("lead").textContent="This tour is optimized for your web browser. Tap below to open it.";
+    var ob=document.getElementById("openBtn"); ob.style.display="flex";
+    document.getElementById("browserName").textContent="Chrome";
+    document.getElementById("steps").style.display="none";       // hide the iOS steps; button is primary
+    document.getElementById("smallCopy").style.display="block";  // tiny fallback if the button is blocked
+    ob.addEventListener("click",function(e){
+      e.preventDefault();
+      try{ window.location.href="intent://tours.zoomr.ca/#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url="+encodeURIComponent(URL_APP)+";end"; }
+      catch(_){ window.open(URL_APP,"_blank"); }
+    });
+  } else if(isIOS){
+    // iPhone: cannot open the browser from here — copy + paste is the way
+    document.getElementById("lead").innerHTML="This tour is optimized for your web browser. On iPhone, copy the link and open it in <b>Safari</b>.";
+    // copy block already visible; steps already say Safari
+  } else {
+    // desktop / unknown: a plain open link, plus copy as backup
+    document.getElementById("openBtn").style.display="flex";
+    document.getElementById("steps").style.display="none";
+    document.getElementById("browserName").textContent="your browser";
+  }
+</script>
+</body></html>
