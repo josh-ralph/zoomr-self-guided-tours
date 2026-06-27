@@ -905,10 +905,13 @@ function endRecovery(rejoined){ recovering=false; recoveryRoute=null; recMan=[];
 function updateRerouteBtn(offRoute){ const b=document.getElementById('rerouteBtn'); if(!b) return; const vis=(routeEndpoint && !rerouteOptedOut && (recovering || rerouteFetching || offRoute)); b.style.display=vis?'flex':'none'; b.textContent='cancel reroute'; }
 var _rb=document.getElementById('rerouteBtn'); if(_rb) _rb.onclick=function(){ rerouteOptedOut=true; endRecovery(false); updateRerouteBtn(false); };
 async function fetchStreet(m, tourId){
+  // Street names are normally baked into the published tour. This is a live
+  // fallback, routed through our own ORS proxy (no public Nominatim use).
+  if(!routeEndpoint){ m.street=''; saveStreet(m, tourId); return; }
   try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${m.lat}&lon=${m.lon}&zoom=17&addressdetails=1`,{headers:{'Accept':'application/json'}});
-    const j=await r.json(); const a=j.address||{};
-    m.street=a.road||a.pedestrian||a.footway||a.path||a.cycleway||'';   // '' = looked up, none found
+    const r=await fetch(routeEndpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({reverse:{lat:m.lat,lon:m.lon}})});
+    const j=await r.json();
+    m.street=(j&&j.street)||'';   // '' = looked up, none found
   }catch(e){ m.street=''; }
   saveStreet(m, tourId);
 }
