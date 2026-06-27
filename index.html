@@ -287,21 +287,8 @@
     .wc-dots span.on{background:#0E9AA7;width:20px;border-radius:5px}
   </style>
   <div class="wc-head"><button class="wc-skip" id="welcomeX">Skip</button></div>
-  <div id="wcPages">
-    <div class="wc-page on">
-      <div class="wc-ic">🧭</div><h3>Two apps, two jobs</h3>
-      <p>🧭 <b>Zoomr Tours</b> (this app) guides your route, narrates the sights and answers your questions.<br><br>🛴 <b>Revii</b> controls your scooter — switch back to Revii to <b>pause or end</b> your ride.</p>
-    </div>
-    <div class="wc-page">
-      <div class="wc-ic">▶️</div><h3>Getting started</h3>
-      <p>Pick a tour and tap <b>Start</b> — you&rsquo;ll be guided turn by turn.<br><br>Keep your volume up for the voice guide, and tap <b>Ask the Guide</b> anytime for tips, history or food.</p>
-    </div>
-    <div class="wc-page">
-      <div class="wc-ic">⚠️</div><h3>Ride safely</h3>
-      <p>Obey all traffic laws, stay alert and wear a helmet. This app assists with navigation — you&rsquo;re responsible for riding safely.<br><br>🔒 Your location stays on your device — never stored.</p>
-    </div>
-  </div>
-  <div class="wc-dots"><span class="on"></span><span></span><span></span></div>
+  <div id="wcPages"></div>
+  <div class="wc-dots" id="wcDots"></div>
   <button class="btn next" id="wcNext" style="width:calc(100% - 32px);margin:0 16px 16px">Next ›</button>
 </div></div>
 
@@ -1249,6 +1236,7 @@ function applyBrandLogo(logo,dark){ ['logoImg','logoImgP'].forEach(id=>{ const e
 function applyGuideConfig(cfg){ if(!cfg) return; const g=cfg.guide;
   if(g){ if(g.endpoint!=null) GUIDE_ENDPOINT=g.endpoint; if(g.model) GUIDE_MODEL=g.model; if(g.liveNarration!=null) GUIDE_LIVE_NARRATION=!!g.liveNarration; if(g.rate) GUIDE_RATE=+g.rate||1; if(g.voice!=null) GUIDE_VOICE=g.voice; if(g.knowledge!=null) GUIDE_KNOWLEDGE=g.knowledge; try{ pickVoice(); }catch(e){} }
   if(cfg.route){ routeEndpoint=cfg.route.endpoint||''; routeProfile=cfg.route.profile||'cycling-regular'; }
+  if(Array.isArray(cfg.welcome) && cfg.welcome.length) WELCOME=cfg.welcome;
   if(cfg.logo!=null || cfg.logoDark!=null) applyBrandLogo(cfg.logo, cfg.logoDark);
 }
 
@@ -1485,7 +1473,21 @@ function initApp(){
 }
 let wcPage=0;
 function wcShow(i){ const pages=document.querySelectorAll('#wcPages .wc-page'), dots=document.querySelectorAll('.wc-dots span'); if(!pages.length)return; wcPage=Math.max(0,Math.min(i,pages.length-1)); pages.forEach((p,n)=>p.classList.toggle('on',n===wcPage)); dots.forEach((d,n)=>d.classList.toggle('on',n===wcPage)); document.getElementById('wcNext').textContent = wcPage===pages.length-1 ? 'Let\u2019s explore' : 'Next \u203a'; }
-function showWelcome(){ wcShow(0); document.getElementById('welcomeModal').classList.add('open'); }
+const WELCOME_DEFAULT=[
+  {ic:'🧭',title:'Two apps, two jobs',body:`🧭 <b>Zoomr Tours</b> (this app) guides your route, narrates the sights and answers your questions.<br><br>🛴 <b>Revii</b> controls your scooter — switch back to Revii to <b>pause or end</b> your ride.`},
+  {ic:'▶️',title:'Getting started',body:`Pick a tour and tap <b>Start</b> — you&rsquo;ll be guided turn by turn.<br><br>Keep your volume up for the voice guide, and tap <b>Ask the Guide</b> anytime for tips, history or food.`},
+  {ic:'⚠️',title:'Ride safely',body:`Obey all traffic laws, stay alert and wear a helmet. This app assists with navigation — you&rsquo;re responsible for riding safely.<br><br>🔒 Your location stays on your device — never stored.<br><br>By riding you agree to the <a href="https://www.zoomr.ca/user-agreement" target="_blank" rel="noopener" style="color:#0E9AA7;font-weight:600">Zoomr User Agreement</a>.<br><br><span style="font-size:12px;color:#8a93a0">Maps © OpenStreetMap, OpenMapTiles · Directions by OpenRouteService · Guide by Anthropic</span>`}
+];
+let WELCOME=WELCOME_DEFAULT;
+function renderWelcome(){
+  const wrap=document.getElementById('wcPages'), dots=document.getElementById('wcDots'); if(!wrap||!dots) return;
+  const pages=(Array.isArray(WELCOME)&&WELCOME.length)?WELCOME:WELCOME_DEFAULT;
+  wrap.innerHTML=pages.map((p,i)=>`<div class="wc-page${i===0?' on':''}"><div class="wc-ic">${p.ic||''}</div><h3>${p.title||''}</h3><p>${p.body||''}</p></div>`).join('');
+  dots.innerHTML=pages.map((p,i)=>`<span${i===0?' class="on"':''}></span>`).join('');
+  dots.querySelectorAll('span').forEach((d,n)=>d.addEventListener('click',()=>wcShow(n)));
+  wcPage=0;
+}
+function showWelcome(){ renderWelcome(); wcShow(0); document.getElementById('welcomeModal').classList.add('open'); }
 function closeWelcome(){ document.getElementById('welcomeModal').classList.remove('open'); try{ localStorage.setItem('zoomrWelcomed','1'); }catch(e){} }
 function maybeWelcome(){ let seen=false; try{ seen=localStorage.getItem('zoomrWelcomed')==='1'; }catch(e){} if(!seen) showWelcome(); }
 // load editable tour data; fall back to the embedded copy (offline / file://)
@@ -1522,7 +1524,7 @@ function simStart(idx, speed){
   reportSim();
 }
 window.addEventListener('message',function(e){ const d=e&&e.data; if(!d) return;
-  if(d.zoomrPreview && Array.isArray(d.zoomrTours) && d.zoomrTours.length){ window.__zoomrPreview=true; simStop(); TOURS=d.zoomrTours; DATA=TOURS[0]; applyGuideConfig({guide:d.zoomrGuide, logo:d.zoomrLogo, logoDark:d.zoomrLogoDark, route:d.zoomrRoute}); TOURS.forEach(t=>t._man=null); try{showPicker();}catch(_){ } initApp(); return; }
+  if(d.zoomrPreview && Array.isArray(d.zoomrTours) && d.zoomrTours.length){ window.__zoomrPreview=true; simStop(); TOURS=d.zoomrTours; DATA=TOURS[0]; applyGuideConfig({guide:d.zoomrGuide, logo:d.zoomrLogo, logoDark:d.zoomrLogoDark, route:d.zoomrRoute, welcome:d.zoomrWelcome}); TOURS.forEach(t=>t._man=null); try{showPicker();}catch(_){ } initApp(); return; }
   if(d.zoomrSim && window.__zoomrPreview){
     if(d.zoomrSim==='start') simStart(d.idx||0, d.speed||20);
     else if(d.zoomrSim==='speed') simSpeedKmh=d.speed||20;
