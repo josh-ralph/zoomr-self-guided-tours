@@ -1050,7 +1050,9 @@ function updatePosition(lat,lon,acc){
       else { guideRecovery(lat,lon,'back on tour'); return; }
     }
   }
-  if(nextStop===0 && !reached.has(0) && !recovering){          // heading to the start of the tour (no live routing)
+  if(nextStop===0 && !reached.has(0) && !recovering){          // heading to the start of the tour
+    // draw/ guide a live route to the start as soon as GPS is available (beginTour may have run before a fix)
+    if(routeEndpoint && me && !rerouteFetching && (!recoveryRoute || !recoveryRoute.length)){ routeToStop(0,'Follow the route to the start of the tour.'); }
     setStatus('Follow the route to the start — '+stopAt(0).name+' · '+fmt(haversine(lat,lon,stopAt(0).lat,stopAt(0).lon)));
     return;
   }
