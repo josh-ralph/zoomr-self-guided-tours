@@ -208,9 +208,11 @@
       <div class="livebtns">
         <button class="lbtn icon" id="wholeBtn" title="Whole route" aria-label="Whole route"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5"/><path d="M4 4l6.5 6.5"/><path d="M15 4h5v5"/><path d="M20 4l-6.5 6.5"/><path d="M9 20H4v-5"/><path d="M4 20l6.5-6.5"/><path d="M15 20h5v-5"/><path d="M20 20l-6.5-6.5"/></svg></button>
         <button class="lbtn icon" id="voiceBtn" title="Voice guide" aria-label="Voice guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.6L13 19V5L7.6 9.5H4z" fill="currentColor" stroke="none"/><path d="M16.4 8.8a4.6 4.6 0 010 6.4"/><path d="M19 6.3a8 8 0 010 11.4"/></svg></button>
+        <button class="lbtn icon" id="rotBtn" title="Lock to landscape" aria-label="Lock to landscape" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7.5" width="19" height="9" rx="2"/><path d="M7.5 11.5l-1.6-1.6-1.6 1.6"/><path d="M5.9 9.9a4 4 0 014 0"/></svg></button>
       </div>
     </div>
     <button class="ai-fab" id="askBtn" title="Ask the Guide" aria-label="Ask the Guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-8.5 8.5 8.5 8.5 0 01-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 014 11.5 8.5 8.5 0 0112.5 3 8.38 8.38 0 0121 11.5z"/></svg></button>
+    <button id="skipNarrBtn" onclick="skipNarration()" aria-label="Skip narration" style="display:none;position:absolute;left:50%;bottom:46px;transform:translateX(-50%);z-index:35;align-items:center;gap:7px;background:rgba(18,22,26,.86);color:#fff;border:none;border-radius:999px;padding:9px 15px;font-size:13px;font-weight:600;line-height:1;box-shadow:0 3px 12px rgba(0,0,0,.28);cursor:pointer;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20"/><line x1="19" y1="5" x2="19" y2="19"/></svg> Skip narration</button>
     <div class="attr">© OpenMapTiles © OpenStreetMap</div>
   </div>
   <div class="sheet">
@@ -455,6 +457,7 @@ function fitWhole(){
 
 function sceneTransform(scale){ scene.style.transform = `rotate(${-mapHeading}deg)` + ((scale&&scale!==1)?` scale(${scale})`:''); }
 function render(){
+  setWholeIcon();   // keep the recenter/whole-route button in sync with follow state
   const W=wrap.clientWidth,H=wrap.clientHeight,z=state.z;
   const D=Math.ceil(Math.hypot(W,H))+2*TS;            // oversized square so rotation never shows empty corners
   scene.style.left=((W-D)/2)+'px'; scene.style.top=((H-D)/2)+'px';
@@ -603,12 +606,55 @@ document.getElementById('zout').onclick=()=>{ follow=false; zoomTo(Math.round(st
 let showingWhole=false;
 const ICON_WHOLE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5"/><path d="M4 4l6.5 6.5"/><path d="M15 4h5v5"/><path d="M20 4l-6.5 6.5"/><path d="M9 20H4v-5"/><path d="M4 20l6.5-6.5"/><path d="M15 20h5v-5"/><path d="M20 20l-6.5-6.5"/></svg>';
 const ICON_RECENTER='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/></svg>';
-function setWholeIcon(){ const b=document.getElementById('wholeBtn'); if(!b)return; b.innerHTML=showingWhole?ICON_RECENTER:ICON_WHOLE; b.title=showingWhole?'Recenter on me':'Show whole route'; }
+/* The button reflects whether we're tracking the rider. While following → offer
+   "show whole route". Whenever we're NOT following (panned away OR showing the
+   overview) → offer one-tap "recenter & track", so panning to peek ahead snaps
+   back with a single tap. */
+let _wbRecenter=null;
+function setWholeIcon(){ const b=document.getElementById('wholeBtn'); if(!b)return; const recenter=!follow; if(recenter===_wbRecenter) return; _wbRecenter=recenter; b.innerHTML=recenter?ICON_RECENTER:ICON_WHOLE; b.title=recenter?'Recenter & track me':'Show whole route'; }
 document.getElementById('wholeBtn').onclick=()=>{
-  if(showingWhole){ showingWhole=false; rotateOn=true; follow=true; if(riderHeading!=null) mapHeading=riderHeading; if(me){ state.z=Math.max(state.z,16); panToLatLon(me.lat,me.lon); } else locateMe(); }
-  else { showingWhole=true; follow=false; rotateOn=false; mapHeading=0; fitWhole(); }
+  if(!follow){   // panned away or showing the overview → recenter and resume tracking
+    showingWhole=false; rotateOn=true; follow=true; if(riderHeading!=null) mapHeading=riderHeading; if(me){ state.z=Math.max(state.z,16); panToLatLon(me.lat,me.lon); } else locateMe();
+  } else {       // currently tracking → show the whole-route overview
+    showingWhole=true; follow=false; rotateOn=false; mapHeading=0; fitWhole();
+  }
   setWholeIcon();
 };
+
+/* ---- keep the screen awake while the app is open (re-acquired when it returns to the foreground) ---- */
+let wakeLock=null;
+async function requestWake(){
+  try{
+    if('wakeLock' in navigator && document.visibilityState==='visible' && !wakeLock){
+      wakeLock=await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', ()=>{ wakeLock=null; });
+    }
+  }catch(e){ wakeLock=null; }   // unsupported or blocked — fail quietly
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') requestWake(); });
+window.addEventListener('pointerdown', requestWake);   // first user gesture satisfies browsers that require one
+requestWake();
+
+/* ---- landscape lock (Android/Chromium only — iOS Safari can't lock orientation from the web) ---- */
+function canLockOrientation(){ try{ return /Android/i.test(navigator.userAgent) && screen.orientation && typeof screen.orientation.lock==='function'; }catch(e){ return false; } }
+let orientationLocked=false;
+function updateRotBtn(){ const b=document.getElementById('rotBtn'); if(!b) return; b.style.opacity=orientationLocked?'1':'0.75'; b.title=orientationLocked?'Unlock orientation':'Lock to landscape'; }
+async function toggleLandscape(){
+  const b=document.getElementById('rotBtn');
+  try{
+    if(!orientationLocked){
+      if(document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+      await screen.orientation.lock('landscape');
+      orientationLocked=true;
+    } else {
+      try{ screen.orientation.unlock(); }catch(e){}
+      if(document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
+      orientationLocked=false;
+    }
+  }catch(e){ /* not permitted (e.g. not a user gesture / unsupported) */ }
+  updateRotBtn();
+}
+(function initRotBtn(){ const b=document.getElementById('rotBtn'); if(!b) return; if(canLockOrientation()){ b.style.display='inline-flex'; b.onclick=toggleLandscape; updateRotBtn(); } })();
 
 /* drag handles to resize panel vs map — grab (portrait, vertical) / vgrab (landscape, horizontal) */
 const appEl=document.getElementById('app');
@@ -700,11 +746,12 @@ function speak(t,type,force,onDone){ if((!voiceOn&&!force)||!('speechSynthesis'i
   else speechQ.push(item);
   pumpSpeech();
 }
-function pumpSpeech(){ if(speaking||!speechQ.length) return; const it=speechQ.shift(); speaking=true;
-  try{ const u=new SpeechSynthesisUtterance(cleanForSpeech(it.t)); if(!preferredVoice) pickVoice(); if(preferredVoice){ u.voice=preferredVoice; u.lang=preferredVoice.lang||'en-US'; } u.rate=GUIDE_RATE||1; u.pitch=1.0; u.onend=()=>{ speaking=false; if(it.onDone){ try{it.onDone();}catch(e){} } pumpSpeech(); }; u.onerror=()=>{ speaking=false; if(it.onDone){ try{it.onDone();}catch(e){} } pumpSpeech(); }; speechSynthesis.speak(u); }
-  catch(e){ speaking=false; }
+let curSpeakItem=null;   // the utterance currently being spoken (so Skip can stop the narration but leave turns alone)
+function pumpSpeech(){ if(speaking||!speechQ.length) return; const it=speechQ.shift(); speaking=true; curSpeakItem=it;
+  try{ const u=new SpeechSynthesisUtterance(cleanForSpeech(it.t)); if(!preferredVoice) pickVoice(); if(preferredVoice){ u.voice=preferredVoice; u.lang=preferredVoice.lang||'en-US'; } u.rate=GUIDE_RATE||1; u.pitch=1.0; u.onend=()=>{ speaking=false; curSpeakItem=null; if(it.onDone){ try{it.onDone();}catch(e){} } pumpSpeech(); }; u.onerror=()=>{ speaking=false; curSpeakItem=null; if(it.onDone){ try{it.onDone();}catch(e){} } pumpSpeech(); }; speechSynthesis.speak(u); }
+  catch(e){ speaking=false; curSpeakItem=null; }
 }
-function stopSpeech(){ speechQ=[]; speaking=false; if('speechSynthesis'in window) speechSynthesis.cancel(); stopAudio(); }
+function stopSpeech(){ speechQ=[]; speaking=false; curSpeakItem=null; if('speechSynthesis'in window) speechSynthesis.cancel(); stopAudio(); if(typeof hideSkip==='function') hideSkip(); }
 let narrAudio=null;
 function playStopAudio(src,onEnd,onErr){
   try{
@@ -716,11 +763,26 @@ function playStopAudio(src,onEnd,onErr){
   }catch(e){ if(onErr) onErr(); }
 }
 function stopAudio(){ if(narrAudio){ try{ narrAudio.pause(); }catch(e){} } }
-function playSeg(seg,onDone){
+function showSkip(){ const b=document.getElementById('skipNarrBtn'); if(b) b.style.display='inline-flex'; }
+function hideSkip(){ const b=document.getElementById('skipNarrBtn'); if(b) b.style.display='none'; }
+/* Temporary skip: stops only the narration that's playing right now (this stop).
+   Turn-by-turn directions keep working, and following stops still narrate normally. */
+function skipNarration(){
+  hideSkip();
+  if(narrAudio){ try{ narrAudio.onended=null; narrAudio.pause(); }catch(e){} }   // uploaded-audio narration (separate channel from turns)
+  if(curSpeakItem && curSpeakItem.type!=='turn'){                                 // spoken narration — never a turn
+    curSpeakItem.onDone=null;
+    try{ if('speechSynthesis'in window) speechSynthesis.cancel(); }catch(e){}
+    speaking=false; curSpeakItem=null; setTimeout(pumpSpeech,30);                 // let any queued turn directions resume
+  }
+}
+function playSeg(seg,onDone,skippable){
   const hasText = seg && seg.text && String(seg.text).trim();
   if(!seg || seg.off || !voiceOn || (!seg.audio && !hasText)){ if(onDone) onDone(); return; }
-  if(seg.audio){ playStopAudio(seg.audio, onDone, ()=>{ if(hasText) speak(seg.text,'stop',false,onDone); else if(onDone) onDone(); }); return; }
-  speak(seg.text,'stop',false,onDone);
+  if(skippable) showSkip();
+  const done=()=>{ if(skippable) hideSkip(); if(onDone) onDone(); };
+  if(seg.audio){ playStopAudio(seg.audio, done, ()=>{ if(hasText) speak(seg.text,'stop',false,done); else done(); }); return; }
+  speak(seg.text,'stop',false,done);
 }
 function resetProgress(){reached=new Set();nextStop=0;cur=0;skipping=false;renderPanel();}
 const COMPASS8=['north','north-east','east','south-east','south','south-west','west','north-west'];
@@ -770,9 +832,9 @@ async function speakArrival(p){
   const cue ={ audio: s.departAudio, text: departCue(p), off: !!s.departOff };
   if(atStart){
     const launch={ audio: s.startAudio, text:(s.startMsg && String(s.startMsg).trim())?s.startMsg:'', off: !!s.startOff };   // launch intro, skipped independently
-    playSeg(launch, ()=> playSeg(narr, ()=> playSeg(cue)));
+    playSeg(launch, ()=> playSeg(narr, ()=> playSeg(cue), true), true);
   } else {
-    playSeg(narr, ()=> playSeg(cue));
+    playSeg(narr, ()=> playSeg(cue), true);
   }
 }
 // rider leaves a stop (or taps Next): switch focus to the next target — but DON'T narrate until they arrive there
@@ -811,6 +873,7 @@ async function routeToStop(idx, voiceLine){
 function openSkipWarn(){ document.getElementById('skipWarnModal').classList.add('open'); }
 /* ---------- turn-by-turn (geometric, from the drawn path + free OSM street names) ---------- */
 let maneuvers=[];
+let navIdx=0;   // monotonic progress along DATA.route, so self-overlapping loops don't mis-match position
 function bearing(a,b){const φ1=rad(a[0]),φ2=rad(b[0]),Δλ=rad(b[1]-a[1]);
   const y=Math.sin(Δλ)*Math.cos(φ2), x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
   return (Math.atan2(y,x)*180/Math.PI+360)%360;}
@@ -841,7 +904,7 @@ function applyTurnOverrides(tour, mans){
   return mans;
 }
 function buildManeuvers(tour){ const m=applyTurnOverrides(tour, computeManeuversFor(tour.route)); const ts=(tour.zones&&tour.zones.turnScale)||1; m.forEach(x=>{ x.r=((x.rBase!=null)?x.rBase:85)*ts; }); return m; }
-function resetManeuvers(){ maneuvers.forEach(m=>{m.passed=false;m.said=false;}); }
+function resetManeuvers(){ maneuvers.forEach(m=>{m.passed=false;m.said=false;}); navIdx=0; }
 function maneuverText(m){
   if(m.text) return m.text;                                  // admin override instruction
   const dir=m.angle<0?'left':'right', mag=Math.abs(m.angle);
@@ -849,9 +912,25 @@ function maneuverText(m){
   return t + (m.street ? ' onto '+m.street : '');
 }
 function nearestRouteIdx(lat,lon){let best=1e9,bi=0;const R=DATA.route;for(let i=0;i<R.length;i++){const d=haversine(lat,lon,R[i][0],R[i][1]);if(d<best){best=d;bi=i;}}return bi;}
+/* Progress index that only searches a window AHEAD of where we already are, and
+   never moves backward. This stops a self-overlapping route (out-and-backs, loops
+   that finish near the start) from snapping our position onto a later segment and
+   wrongly marking upcoming turns as already passed. */
+function advanceNavIdx(lat,lon){
+  const R=DATA.route; if(!R||!R.length) return navIdx;
+  const start=Math.max(0, navIdx-2), hi=Math.min(R.length-1, navIdx+60);
+  let best=1e9, bi=navIdx, rising=0;
+  for(let i=start;i<=hi;i++){
+    const d=haversine(lat,lon,R[i][0],R[i][1]);
+    if(d<best){ best=d; bi=i; rising=0; }
+    else if(++rising>=4 && best<40) break;   // found where we actually are — stop before any overlapping/return leg of a short out-and-back
+  }
+  if(bi>navIdx) navIdx=bi;
+  return navIdx;
+}
 function upcomingTurn(lat,lon){
   if(!maneuvers.length) return null;
-  const ri=nearestRouteIdx(lat,lon);
+  const ri=advanceNavIdx(lat,lon);
   for(const m of maneuvers){
     if(m.passed) continue;
     if(ri>m.i+2){ m.passed=true; continue; }                    // we've driven past it
@@ -888,7 +967,7 @@ function guideRecovery(lat,lon,toLabel){
   if(t && t.dist<95){ if(voiceOn && !t.m._said && t.dist<55){ speak(maneuverText(t.m),'turn'); t.m._said=true; } setStatus('↩ '+maneuverText(t.m)+' · '+toLabel+' in '+fmt(remain)); }
   else setStatus('↩ Follow the highlighted route · '+toLabel+' in '+fmt(remain));
 }
-function endRecovery(rejoined){ recovering=false; recoveryRoute=null; recMan=[]; recoveryMode='path'; recTargetIdx=-1; updateRerouteBtn(false); render(); if(rejoined){ if(voiceOn) speak('You are back on the tour route.','turn'); setStatus('✅ Back on the tour route'); } }
+function endRecovery(rejoined){ recovering=false; recoveryRoute=null; recMan=[]; recoveryMode='path'; recTargetIdx=-1; if(me){ navIdx=nearestRouteIdx(me.lat,me.lon); } updateRerouteBtn(false); render(); if(rejoined){ if(voiceOn) speak('You are back on the tour route.','turn'); setStatus('✅ Back on the tour route'); } }
 function updateRerouteBtn(offRoute){ const b=document.getElementById('rerouteBtn'); if(!b) return; const vis=(routeEndpoint && !rerouteOptedOut && (recovering || rerouteFetching || offRoute)); b.style.display=vis?'flex':'none'; b.textContent='cancel reroute'; }
 var _rb=document.getElementById('rerouteBtn'); if(_rb) _rb.onclick=function(){ rerouteOptedOut=true; endRecovery(false); updateRerouteBtn(false); };
 async function fetchStreet(m, tourId){
@@ -941,7 +1020,7 @@ function updatePosition(lat,lon,acc){
   if(previewing) return;                       // preview is manual step-through; just show the live dot
   if(returningToHub){                          // tour over, guiding back to the Zoomr Zone
     const hub=DATA.stops[hubIdx], d=haversine(lat,lon,hub.lat,hub.lon);
-    if(d < (hub._r||ARRIVE)){ returningToHub=false; if(!hub.endOff){ const _et=(hub.endMsg&&String(hub.endMsg).trim())?hub.endMsg:''; if(_et) $('desc').textContent=_et; playSeg({audio:hub.endAudio, text:_et}); } expandSheet(); setStatus('🏁 Back at the Start / Finish Zone — end your rental in the Revii app'); return; }
+    if(d < (hub._r||ARRIVE)){ returningToHub=false; if(!hub.endOff){ const _et=(hub.endMsg&&String(hub.endMsg).trim())?hub.endMsg:''; if(_et) $('desc').textContent=_et; playSeg({audio:hub.endAudio, text:_et}, null, true); } expandSheet(); setStatus('🏁 Back at the Start / Finish Zone — end your rental in the Revii app'); return; }
     setStatus('🔚 Back to '+hub.name+' · '+fmt(d)); return;
   }
   const s0=stopAt(0), d0=haversine(lat,lon,s0.lat,s0.lon);
@@ -960,7 +1039,7 @@ function updatePosition(lat,lon,acc){
   }
   // once they ride away from the stop, switch focus to the next leg (still no narration until arrival)
   if(phase==='atstop' && nextStop<order.length && haversine(lat,lon,stopAt(cur).lat,stopAt(cur).lon) > ((stopAt(cur)._r||ARRIVE)+5)){ goEnroute(); }
-  if(nextStop>=order.length){ if(!returningToHub){ returnToHub(); if(voiceOn) speak('That’s the last stop! Follow the route back to the Start and Finish Zone.','turn'); } return; }
+  if(nextStop>=order.length){ if(!returningToHub){ returnToHub(); } return; }   // head back to the hub silently; the stop's own audio + the finish recap cover the voice
   const ns=stopAt(nextStop), off=distToRoute(lat,lon);
   if(recovering && recoveryRoute){
     if(recoveryMode==='stop'){
@@ -1501,8 +1580,8 @@ function simStop(){ if(simTimer){ clearInterval(simTimer); simTimer=null; } }
 function routeLen(R){ let t=0; for(let i=1;i<R.length;i++) t+=haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); return t; }
 function cumDistToIdx(idx){ const R=DATA.route; let t=0; for(let i=1;i<=idx && i<R.length;i++) t+=haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); return t; }
 function reportSim(){ try{ parent.postMessage({zoomrSimAt:simDist, zoomrSimTotal:simTotal, zoomrSimPos:nextStop}, '*'); }catch(e){} }
-function simSeek(dist){ if(!DATA||!DATA.route) return; if(!touring) beginTour(); simDist=Math.max(0,Math.min(dist, simTotal||dist)); simLastPos=null; const p=simPosAt(simDist); updatePosition(p.lat,p.lon,6); reportSim(); }
-function simJump(pos){ if(!DATA||!order.length) return; if(!touring) beginTour(); const p=Math.max(0,Math.min(pos|0, order.length-1)); reached=new Set(); for(let k=0;k<p;k++) reached.add(k); nextStop=p; phase='enroute'; const s=stopAt(p); simDist=cumDistToIdx(nearestRouteIdx(s.lat,s.lon)); simLastPos=null; updatePosition(s.lat,s.lon,6); reportSim(); }
+function simSeek(dist){ if(!DATA||!DATA.route) return; if(!touring) beginTour(); simDist=Math.max(0,Math.min(dist, simTotal||dist)); simLastPos=null; const p=simPosAt(simDist); navIdx=nearestRouteIdx(p.lat,p.lon); updatePosition(p.lat,p.lon,6); reportSim(); }
+function simJump(pos){ if(!DATA||!order.length) return; if(!touring) beginTour(); const p=Math.max(0,Math.min(pos|0, order.length-1)); reached=new Set(); for(let k=0;k<p;k++) reached.add(k); nextStop=p; phase='enroute'; const s=stopAt(p); simDist=cumDistToIdx(nearestRouteIdx(s.lat,s.lon)); simLastPos=null; navIdx=nearestRouteIdx(s.lat,s.lon); updatePosition(s.lat,s.lon,6); reportSim(); }
 function simTick(){
   if(!DATA||!DATA.route) return;
   simDist += (simSpeedKmh/3.6)*0.1;                 // metres advanced this 100ms tick
