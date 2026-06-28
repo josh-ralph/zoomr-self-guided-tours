@@ -97,6 +97,12 @@
   .mrow .mtog{border:none;background:#eef0f4;width:30px;height:30px;border-radius:8px;font-size:15px;cursor:pointer;flex:0 0 auto}
   .lbtn.go{background:#10b981;color:#fff}
   .status{position:absolute;top:54px;left:12px;max-width:72%;text-align:left;z-index:18;pointer-events:none;background:rgba(29,34,48,.92);color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:14px;line-height:1.35;white-space:normal;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+  .dircard{position:absolute;top:10px;left:50%;transform:translateX(-50%) translateY(-170%);z-index:23;display:flex;align-items:center;gap:12px;background:rgba(29,34,48,.96);color:#fff;border-radius:16px;padding:10px 16px 10px 13px;min-width:200px;max-width:88%;box-shadow:0 6px 20px rgba(0,0,0,.3);transition:transform .38s cubic-bezier(.22,1,.36,1);pointer-events:none}
+  .dircard.show{transform:translateX(-50%) translateY(0)}
+  .dircard .dir-ico{flex:0 0 auto;color:#7fe0d8;display:flex}
+  .dircard .dir-ico svg{width:34px;height:34px}
+  .dircard .dir-dist{font-size:21px;font-weight:800;line-height:1.05}
+  .dircard .dir-instr{font-size:13px;font-weight:600;color:#cfe0e6;margin-top:1px}
   .status.warn{background:#c2410c}
   /* SHEET */
   .sheet{position:relative;background:var(--card);border-top-left-radius:20px;border-top-right-radius:20px;box-shadow:var(--shadow);z-index:40;display:flex;flex-direction:column;overflow:hidden}
@@ -203,6 +209,7 @@
     </div>
     <div class="mapbtns"><button id="zin">+</button><button id="zout">−</button></div>
     <div class="status" id="status" style="display:none"></div>
+    <div class="dircard" id="dirCard"><div class="dir-ico" id="dirIco"></div><div><div class="dir-dist" id="dirDist"></div><div class="dir-instr" id="dirInstr"></div></div></div>
     <button class="reroute-fab" id="rerouteBtn">🧭 Route me back</button>
     <div class="livebar">
       <div class="livebtns">
@@ -212,7 +219,14 @@
       </div>
     </div>
     <button class="ai-fab" id="askBtn" title="Ask the Guide" aria-label="Ask the Guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-8.5 8.5 8.5 8.5 0 01-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 014 11.5 8.5 8.5 0 0112.5 3 8.38 8.38 0 0121 11.5z"/></svg></button>
-    <button id="skipNarrBtn" onclick="skipNarration()" aria-label="Skip narration" style="display:none;position:absolute;left:50%;bottom:46px;transform:translateX(-50%);z-index:35;align-items:center;gap:7px;background:rgba(18,22,26,.86);color:#fff;border:none;border-radius:999px;padding:9px 15px;font-size:13px;font-weight:600;line-height:1;box-shadow:0 3px 12px rgba(0,0,0,.28);cursor:pointer;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20"/><line x1="19" y1="5" x2="19" y2="19"/></svg> Skip narration</button>
+    <div id="narrCtrls" style="display:none;position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:28;flex-direction:column;align-items:center;gap:5px;pointer-events:none">
+      <div style="font-size:11px;font-weight:700;color:#fff;background:rgba(18,22,26,.72);padding:2px 10px;border-radius:999px;letter-spacing:.4px">NARRATION</div>
+      <div style="display:flex;gap:6px;pointer-events:auto">
+        <button class="lbtn icon" id="narrReplay" onclick="replayNarration()" title="Start over" aria-label="Start over"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 5 9 12 19 19" fill="currentColor" stroke="none"/><line x1="6" y1="5" x2="6" y2="19"/></svg></button>
+        <button class="lbtn icon" id="narrPause" onclick="toggleNarrPause()" title="Pause" aria-label="Pause"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/></svg></button>
+        <button class="lbtn icon" id="narrSkip" onclick="skipNarration()" title="Skip narration" aria-label="Skip narration"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 5 15 12 5 19" fill="currentColor" stroke="none"/><line x1="18" y1="5" x2="18" y2="19"/></svg></button>
+      </div>
+    </div>
     <div class="attr">© OpenMapTiles © OpenStreetMap</div>
   </div>
   <div class="sheet">
@@ -519,7 +533,7 @@ function render(){
     d.className='stop-marker'+(pos<cur?' done':'')+(pos===cur?' active':'');
     d.style.left=px+'px'; d.style.top=py+'px';
     d.style.transform=`translate(-50%,-50%) rotate(${mapHeading}deg)`+(pos===cur?' scale(1.22)':'');
-    d.textContent=(origIdx===hubIdx)?'🏁':(pos+1); d.onclick=()=>goTo(pos);
+    d.textContent=(pos===0||pos===order.length-1)?'🏁':(pos+1); d.onclick=()=>goTo(pos);
     markersEl.appendChild(d);
   });
   if(me){
@@ -708,7 +722,10 @@ let hubIdx=0, reviiSeen=false;   // Zoomr Zone stop index / one-time Revii intro
 const statusEl=document.getElementById('status');
 const fmt=m=> m<1000 ? Math.round(m/5)*5+' m' : (m/1000).toFixed(1)+' km';
 let statusTimer=null;
-function setStatus(t,warn,autohide){clearTimeout(statusTimer);statusEl.style.display='block';statusEl.textContent=t;statusEl.classList.toggle('warn',!!warn);if(autohide)statusTimer=setTimeout(()=>{statusEl.style.display='none';},5000);}
+function setStatus(t,warn,autohide){clearTimeout(statusTimer);hideDir();statusEl.style.display='block';statusEl.textContent=t;statusEl.classList.toggle('warn',!!warn);if(autohide)statusTimer=setTimeout(()=>{statusEl.style.display='none';},5000);}
+/* Google-style directions card (top-center). Mutually exclusive with the status pill. */
+function showDir(dir,instr,dist){ const c=document.getElementById('dirCard'); if(!c) return; const ic=document.getElementById('dirIco'),di=document.getElementById('dirDist'),ins=document.getElementById('dirInstr'); if(ic) ic.innerHTML=arrowSvg(dir); if(di) di.textContent=dist||''; if(ins) ins.textContent=instr||''; c.classList.add('show'); if(statusEl) statusEl.style.display='none'; }
+function hideDir(){ const c=document.getElementById('dirCard'); if(c) c.classList.remove('show'); }
 let speechQ=[], speaking=false, preferredVoice=null;
 function cleanForSpeech(t){
   if(!t) return '';
@@ -751,7 +768,7 @@ function pumpSpeech(){ if(speaking||!speechQ.length) return; const it=speechQ.sh
   try{ const u=new SpeechSynthesisUtterance(cleanForSpeech(it.t)); if(!preferredVoice) pickVoice(); if(preferredVoice){ u.voice=preferredVoice; u.lang=preferredVoice.lang||'en-US'; } u.rate=GUIDE_RATE||1; u.pitch=1.0; u.onend=()=>{ speaking=false; curSpeakItem=null; if(it.onDone){ try{it.onDone();}catch(e){} } pumpSpeech(); }; u.onerror=()=>{ speaking=false; curSpeakItem=null; if(it.onDone){ try{it.onDone();}catch(e){} } pumpSpeech(); }; speechSynthesis.speak(u); }
   catch(e){ speaking=false; curSpeakItem=null; }
 }
-function stopSpeech(){ speechQ=[]; speaking=false; curSpeakItem=null; if('speechSynthesis'in window) speechSynthesis.cancel(); stopAudio(); if(typeof hideSkip==='function') hideSkip(); }
+function stopSpeech(){ speechQ=[]; speaking=false; curSpeakItem=null; if('speechSynthesis'in window) speechSynthesis.cancel(); stopAudio(); curNarrSeg=null; narrPaused=false; if(typeof hideNarrControls==='function') hideNarrControls(); }
 let narrAudio=null;
 function playStopAudio(src,onEnd,onErr){
   try{
@@ -763,26 +780,44 @@ function playStopAudio(src,onEnd,onErr){
   }catch(e){ if(onErr) onErr(); }
 }
 function stopAudio(){ if(narrAudio){ try{ narrAudio.pause(); }catch(e){} } }
-function showSkip(){ const b=document.getElementById('skipNarrBtn'); if(b) b.style.display='inline-flex'; }
-function hideSkip(){ const b=document.getElementById('skipNarrBtn'); if(b) b.style.display='none'; }
-/* Temporary skip: stops only the narration that's playing right now (this stop).
-   Turn-by-turn directions keep working, and following stops still narrate normally. */
-function skipNarration(){
-  hideSkip();
-  if(narrAudio){ try{ narrAudio.onended=null; narrAudio.pause(); }catch(e){} }   // uploaded-audio narration (separate channel from turns)
-  if(curSpeakItem && curSpeakItem.type!=='turn'){                                 // spoken narration — never a turn
+/* ---- narration transport (start over / pause-play / skip) ---- */
+const ICON_NPAUSE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/></svg>';
+const ICON_NPLAY='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7 5 19 12 7 19" fill="currentColor" stroke="none"/></svg>';
+let curNarrSeg=null, curNarrDone=null, narrMedium=null, narrPaused=false;
+function showNarrControls(){ const el=document.getElementById('narrCtrls'); if(el) el.style.display='flex'; }
+function hideNarrControls(){ const el=document.getElementById('narrCtrls'); if(el) el.style.display='none'; }
+function setPauseIcon(){ const b=document.getElementById('narrPause'); if(!b) return; b.innerHTML = narrPaused?ICON_NPLAY:ICON_NPAUSE; b.title=narrPaused?'Resume':'Pause'; }
+/* stop the narration playing right now (audio + spoken) without touching turn directions or firing the next segment */
+function _haltNarr(){
+  if(narrAudio){ try{ narrAudio.onended=null; narrAudio.pause(); }catch(e){} }
+  if(curSpeakItem && curSpeakItem.type!=='turn'){
     curSpeakItem.onDone=null;
     try{ if('speechSynthesis'in window) speechSynthesis.cancel(); }catch(e){}
-    speaking=false; curSpeakItem=null; setTimeout(pumpSpeech,30);                 // let any queued turn directions resume
+    speaking=false; curSpeakItem=null; setTimeout(pumpSpeech,30);   // let any queued turn directions resume
   }
+}
+/* Temporary skip: stops just this stop's narration. Turns keep working; following stops still narrate. */
+function skipNarration(){ _haltNarr(); curNarrSeg=null; narrPaused=false; hideNarrControls(); }
+function replayNarration(){ if(!curNarrSeg) return; const seg=curNarrSeg, done=curNarrDone; _haltNarr(); narrPaused=false; playSeg(seg, done, true); }
+function toggleNarrPause(){
+  if(narrPaused){
+    if(narrMedium==='audio'){ if(narrAudio){ try{ narrAudio.play(); }catch(e){} } }
+    else { try{ if('speechSynthesis'in window) speechSynthesis.resume(); }catch(e){} }
+    narrPaused=false;
+  } else {
+    if(narrMedium==='audio'){ if(narrAudio){ try{ narrAudio.pause(); }catch(e){} } }
+    else { try{ if('speechSynthesis'in window) speechSynthesis.pause(); }catch(e){} }
+    narrPaused=true;
+  }
+  setPauseIcon();
 }
 function playSeg(seg,onDone,skippable){
   const hasText = seg && seg.text && String(seg.text).trim();
   if(!seg || seg.off || !voiceOn || (!seg.audio && !hasText)){ if(onDone) onDone(); return; }
-  if(skippable) showSkip();
-  const done=()=>{ if(skippable) hideSkip(); if(onDone) onDone(); };
-  if(seg.audio){ playStopAudio(seg.audio, done, ()=>{ if(hasText) speak(seg.text,'stop',false,done); else done(); }); return; }
-  speak(seg.text,'stop',false,done);
+  if(skippable){ curNarrSeg=seg; curNarrDone=onDone; narrPaused=false; showNarrControls(); setPauseIcon(); }
+  const done=()=>{ if(skippable){ hideNarrControls(); if(curNarrSeg===seg) curNarrSeg=null; } if(onDone) onDone(); };
+  if(seg.audio){ narrMedium='audio'; playStopAudio(seg.audio, done, ()=>{ if(hasText){ narrMedium='tts'; speak(seg.text,'stop',false,done); } else done(); }); return; }
+  narrMedium='tts'; speak(seg.text,'stop',false,done);
 }
 function resetProgress(){reached=new Set();nextStop=0;cur=0;skipping=false;renderPanel();}
 const COMPASS8=['north','north-east','east','south-east','south','south-west','west','north-west'];
@@ -858,22 +893,23 @@ function doNavigate(target){
   if(me && routeEndpoint){ routeToStop(target, 'Navigating to '+stopAt(target).name+'. Watch for traffic and follow the rules of the road.'); }
   else { endRecovery(false); if(voiceOn) speak('Navigating to '+stopAt(target).name+'.','turn'); setStatus('Head to '+stopAt(target).name); }
 }
-async function routeToStop(idx, voiceLine){
+async function routeToStop(idx, voiceLine, quiet){
   if(!me||!routeEndpoint||rerouteFetching) return;
-  rerouteFetching=true; const s=stopAt(idx); recTargetIdx=idx; setStatus('Routing to '+s.name+'…');
+  rerouteFetching=true; const s=stopAt(idx); recTargetIdx=idx; if(!quiet) setStatus('Routing to '+s.name+'…');
   try{
     recoveryRoute=await fetchRoute([me.lon,me.lat],[s.lon,s.lat]);
     recMan=computeManeuversFor(recoveryRoute); recMan.forEach(m=>{ m._passed=false; m._said=false; });
     recovering=true; recoveryMode='stop'; follow=true; rotateOn=true;
     if(voiceOn) speak(voiceLine||('Taking you to '+s.name+'.'),'turn');
     render(); updateRerouteBtn(true);
-  }catch(e){ recoveryRoute=null; recovering=false; setStatus('Could not route there — follow the tour to '+s.name+'.'); }
+  }catch(e){ recoveryRoute=null; recovering=false; if(!quiet) setStatus('Could not route there — follow the tour to '+s.name+'.'); }   // quiet: fall back silently to plain "head to start" guidance
   finally{ rerouteFetching=false; }
 }
 function openSkipWarn(){ document.getElementById('skipWarnModal').classList.add('open'); }
 /* ---------- turn-by-turn (geometric, from the drawn path + free OSM street names) ---------- */
 let maneuvers=[];
 let navIdx=0;   // monotonic progress along DATA.route, so self-overlapping loops don't mis-match position
+let toStartTriedAt=0;   // throttle live route-to-start attempts (avoids spamming when GPS can't snap to a road)
 function bearing(a,b){const φ1=rad(a[0]),φ2=rad(b[0]),Δλ=rad(b[1]-a[1]);
   const y=Math.sin(Δλ)*Math.cos(φ2), x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
   return (Math.atan2(y,x)*180/Math.PI+360)%360;}
@@ -898,20 +934,37 @@ function computeManeuversFor(R){
 function computeManeuvers(){ return computeManeuversFor(DATA.route); }
 function applyTurnOverrides(tour, mans){
   const tt=tour.turns; if(!tt) return mans;
-  if(tt.edits){ for(let q=mans.length-1;q>=0;q--){ const e=tt.edits[mans[q].i]; if(e){ if(e.off){ mans.splice(q,1); continue; } if(e.street!=null) mans[q].street=e.street; if(e.text!=null) mans[q].text=e.text; if(e.ni!=null) mans[q].i=e.ni; if(e.r!=null) mans[q].rBase=e.r; } } }
-  if(Array.isArray(tt.added)) tt.added.forEach(a=>mans.push({i:a.i|0,lat:a.lat,lon:a.lon,angle:a.angle||0,street:a.street||null,text:a.text||null,rBase:(a.r!=null?a.r:null),fetching:(a.street!=null),passed:false,said:false,manual:true}));
+  if(tt.edits){ for(let q=mans.length-1;q>=0;q--){ const e=tt.edits[mans[q].i]; if(e){ if(e.off){ mans.splice(q,1); continue; } if(e.street!=null) mans[q].street=e.street; if(e.text!=null) mans[q].text=e.text; if(e.dir!=null) mans[q].dir=e.dir; if(e.ni!=null) mans[q].i=e.ni; if(e.r!=null) mans[q].rBase=e.r; } } }
+  if(Array.isArray(tt.added)) tt.added.forEach(a=>mans.push({i:a.i|0,lat:a.lat,lon:a.lon,angle:a.angle||0,street:a.street||null,text:a.text||null,dir:a.dir||null,rBase:(a.r!=null?a.r:null),fetching:(a.street!=null),passed:false,said:false,manual:true}));
   mans.sort((x,y)=>x.i-y.i);
   return mans;
 }
 function buildManeuvers(tour){ const m=applyTurnOverrides(tour, computeManeuversFor(tour.route)); const ts=(tour.zones&&tour.zones.turnScale)||1; m.forEach(x=>{ x.r=((x.rBase!=null)?x.rBase:85)*ts; }); return m; }
-function resetManeuvers(){ maneuvers.forEach(m=>{m.passed=false;m.said=false;}); navIdx=0; }
+function resetManeuvers(){ maneuvers.forEach(m=>{m.passed=false;m.said=false;}); navIdx=0; toStartTriedAt=0; }
+/* turn direction: an admin override (m.dir) wins; otherwise derive from the path angle */
+function dirFromAngle(a){ a=a||0; const m=Math.abs(a); if(m<18) return 'straight'; const s=a<0?'left':'right'; if(m<50) return 'slight-'+s; if(m>=120) return 'sharp-'+s; return s; }
+function effectiveDir(m){ return (m && m.dir) ? m.dir : dirFromAngle(m?m.angle:0); }
+const DIR_PHRASE={'straight':'Continue straight','left':'Turn left','right':'Turn right','slight-left':'Bear left','slight-right':'Bear right','sharp-left':'Sharp left','sharp-right':'Sharp right','uturn':'Make a U-turn'};
+const DIR_SVG={
+  'straight':'<line x1="12" y1="21" x2="12" y2="5"/><polyline points="6 11 12 5 18 11"/>',
+  'left':'<path d="M17 21v-8a4 4 0 0 0-4-4H7"/><polyline points="10 5 6 9 10 13"/>',
+  'right':'<path d="M7 21v-8a4 4 0 0 1 4-4h6"/><polyline points="14 5 18 9 14 13"/>',
+  'slight-left':'<line x1="15" y1="21" x2="9" y2="8"/><polyline points="7.5 13 9 7 14.5 9"/>',
+  'slight-right':'<line x1="9" y1="21" x2="15" y2="8"/><polyline points="9.5 9 15 7 16.5 13"/>',
+  'sharp-left':'<path d="M15 21v-5a3 3 0 0 0-3-3H8"/><polyline points="11 9 6 13 10 17"/>',
+  'sharp-right':'<path d="M9 21v-5a3 3 0 0 1 3-3h4"/><polyline points="13 9 18 13 14 17"/>',
+  'uturn':'<path d="M8 21V11a4 4 0 0 1 8 0v6"/><polyline points="12 13 16 17 20 13"/>'
+};
+function arrowSvg(dir){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">'+(DIR_SVG[dir]||DIR_SVG.straight)+'</svg>'; }
 function maneuverText(m){
   if(m.text) return m.text;                                  // admin override instruction
-  const dir=m.angle<0?'left':'right', mag=Math.abs(m.angle);
-  const t = mag<50?('Bear '+dir) : mag<120?('Turn '+dir) : ('Sharp '+dir);
-  return t + (m.street ? ' onto '+m.street : '');
+  const phrase = DIR_PHRASE[effectiveDir(m)] || 'Continue';
+  return phrase + (m.street && effectiveDir(m)!=='uturn' ? ' onto '+m.street : '');
 }
 function nearestRouteIdx(lat,lon){let best=1e9,bi=0;const R=DATA.route;for(let i=0;i<R.length;i++){const d=haversine(lat,lon,R[i][0],R[i][1]);if(d<best){best=d;bi=i;}}return bi;}
+/* nearest route point at or after `from` — lets stops map progressively so a finish
+   stop sharing the start's location maps to the route END, not the start (loop tours). */
+function nearestRouteIdxFrom(lat,lon,from){const R=DATA.route;let best=1e9,bi=from|0;for(let i=Math.max(0,from|0);i<R.length;i++){const d=haversine(lat,lon,R[i][0],R[i][1]);if(d<best){best=d;bi=i;}}return bi;}
 /* Progress index that only searches a window AHEAD of where we already are, and
    never moves backward. This stops a self-overlapping route (out-and-backs, loops
    that finish near the start) from snapping our position onto a later segment and
@@ -964,8 +1017,8 @@ function guideRecovery(lat,lon,toLabel){
   toLabel=toLabel||'back on tour';
   const ri=nearestIdxOn(recoveryRoute,lat,lon), remain=remainOn(recoveryRoute,ri,lat,lon);
   const t=recUpcoming(lat,lon);
-  if(t && t.dist<95){ if(voiceOn && !t.m._said && t.dist<55){ speak(maneuverText(t.m),'turn'); t.m._said=true; } setStatus('↩ '+maneuverText(t.m)+' · '+toLabel+' in '+fmt(remain)); }
-  else setStatus('↩ Follow the highlighted route · '+toLabel+' in '+fmt(remain));
+  if(t && t.dist<95){ if(voiceOn && !t.m._said && t.dist<55){ speak(maneuverText(t.m),'turn'); t.m._said=true; } showDir(effectiveDir(t.m), maneuverText(t.m), fmt(t.dist)); }
+  else showDir('straight', 'Follow the route '+toLabel, fmt(remain));
 }
 function endRecovery(rejoined){ recovering=false; recoveryRoute=null; recMan=[]; recoveryMode='path'; recTargetIdx=-1; if(me){ navIdx=nearestRouteIdx(me.lat,me.lon); } updateRerouteBtn(false); render(); if(rejoined){ if(voiceOn) speak('You are back on the tour route.','turn'); setStatus('✅ Back on the tour route'); } }
 function updateRerouteBtn(offRoute){ const b=document.getElementById('rerouteBtn'); if(!b) return; const vis=(routeEndpoint && !rerouteOptedOut && (recovering || rerouteFetching || offRoute)); b.style.display=vis?'flex':'none'; b.textContent='cancel reroute'; }
@@ -1039,7 +1092,7 @@ function updatePosition(lat,lon,acc){
   }
   // once they ride away from the stop, switch focus to the next leg (still no narration until arrival)
   if(phase==='atstop' && nextStop<order.length && haversine(lat,lon,stopAt(cur).lat,stopAt(cur).lon) > ((stopAt(cur)._r||ARRIVE)+5)){ goEnroute(); }
-  if(nextStop>=order.length){ if(!returningToHub){ returnToHub(); } return; }   // head back to the hub silently; the stop's own audio + the finish recap cover the voice
+  if(nextStop>=order.length){ setStatus('🏁 Tour complete — lock up and end your rental in the Revii app'); return; }   // finish is the last stop; its own arrival + narration already played
   const ns=stopAt(nextStop), off=distToRoute(lat,lon);
   if(recovering && recoveryRoute){
     if(recoveryMode==='stop'){
@@ -1051,8 +1104,8 @@ function updatePosition(lat,lon,acc){
     }
   }
   if(nextStop===0 && !reached.has(0) && !recovering){          // heading to the start of the tour
-    // draw/ guide a live route to the start as soon as GPS is available (beginTour may have run before a fix)
-    if(routeEndpoint && me && !rerouteFetching && (!recoveryRoute || !recoveryRoute.length)){ routeToStop(0,'Follow the route to the start of the tour.'); }
+    // draw a live route to the start once GPS is available, retried gently (every 15s) as the rider nears a road
+    if(routeEndpoint && me && !rerouteFetching && (!recoveryRoute || !recoveryRoute.length) && (performance.now()-toStartTriedAt>15000)){ toStartTriedAt=performance.now(); routeToStop(0,'Follow the route to the start of the tour.', true); }
     setStatus('Follow the route to the start — '+stopAt(0).name+' · '+fmt(haversine(lat,lon,stopAt(0).lat,stopAt(0).lon)));
     return;
   }
@@ -1064,15 +1117,21 @@ function updatePosition(lat,lon,acc){
     return;
   }
   rerouteOptedOut=false; updateRerouteBtn(false);
-  // turn-by-turn: show the next maneuver when it's close; otherwise the next stop
+  // turn-by-turn: "Continue · <dist to next turn>" (straight arrow) until you enter the
+  // turn's trigger zone, then show the actual turn + arrow. upcomingTurn marks a turn
+  // passed as soon as you're past it, so it flips back to "Continue" right after the turn.
   const turn=upcomingTurn(lat,lon);
-  if(turn && turn.dist < (turn.m.r||85)*2){
+  if(turn){
     maybeFetchStreet(turn.m);
-    if(voiceOn && !turn.m.said && turn.dist < (turn.m.r||85)){ speak(maneuverText(turn.m),'turn'); turn.m.said=true; }
-    setStatus((turn.m.angle<0?'↰ ':'↱ ')+maneuverText(turn.m)+' · '+fmt(turn.dist));
+    if(turn.dist < (turn.m.r||85)){
+      if(voiceOn && !turn.m.said){ speak(maneuverText(turn.m),'turn'); turn.m.said=true; }
+      showDir(effectiveDir(turn.m), maneuverText(turn.m), fmt(turn.dist));
+    } else {
+      showDir('straight', 'Continue', fmt(turn.dist));            // distance to the next turn
+    }
     return;
   }
-  setStatus(`→ ${ns.name} · ${fmt(haversine(lat,lon,ns.lat,ns.lon))}`);
+  showDir('straight', 'Continue to '+ns.name, fmt(haversine(lat,lon,ns.lat,ns.lon)));
 }
 /* ----- start-tour flow ----- */
 function setStartCta(show,mode){
@@ -1105,7 +1164,7 @@ function beginTour(){
   const s0=stopAt(0);
   if(me && haversine(me.lat,me.lon,s0.lat,s0.lon) < (s0._r||ARRIVE)){ arrive(0); }                 // already at the start
   else { cur=0; renderPanel(); collapseSheet();                                                       // away -> guide/route to the start
-    if(me && routeEndpoint){ routeToStop(0,'Follow the route to the start of the tour.'); }
+    if(me && routeEndpoint){ toStartTriedAt=performance.now(); routeToStop(0,'Follow the route to the start of the tour.', true); }
     else if(voiceOn){ speak('Follow the route to the start of the tour.','turn'); }
   }
 }
@@ -1211,8 +1270,7 @@ function inIframe(){ try{ return window.self!==window.top; }catch(e){ return tru
 function startGPS(){
   const btn=document.getElementById('gpsBtn');
   if(watchId!=null) return true;                          // already running
-  if(!('geolocation'in navigator)){ setStatus('Open in your browser for live GPS', true, true); maybeShowGpsBanner(true); return false; }
-  if(window.isSecureContext===false){ setStatus('Open in your browser for live GPS', true, true); maybeShowGpsBanner(true); return false; }
+  if(!('geolocation'in navigator) || window.isSecureContext===false){ setStatus('Live location isn’t available in this browser.', true, true); return false; }
   if(btn) btn.classList.add('on'); setStatus('Locating…'); enableCompass();   // acquire location + compass heading
   watchId=navigator.geolocation.watchPosition(
     p=>{ const c=p.coords, la=c.latitude, lo=c.longitude;
@@ -1225,12 +1283,9 @@ function startGPS(){
          lastPos=[la,lo];
          updatePosition(la,lo,c.accuracy); },
     err=>{ btn.classList.remove('on'); watchId=null;
-      let m;
-      if(err.code===1) m='Location blocked — enable location access in settings';
-      else if(inIframe()) m='Open in your browser for live GPS';
-      else m='Location unavailable — try your browser';
-      setStatus(m,true,true);                              // auto-dismiss after a few seconds
-      if(err.code!==1) maybeShowGpsBanner(true);          // not a permission denial -> likely a WebView
+      setStatus(err.code===1
+        ? 'Location access is off — allow it for this site, then try again.'
+        : 'Couldn’t get your location — make sure location is on, then try again.', true, true);
     },
     {enableHighAccuracy:true, maximumAge:1000, timeout:12000}
   );
@@ -1506,7 +1561,7 @@ function buildCards(){
 }
 function clearLive(){
   if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null;const _g=document.getElementById('gpsBtn'); if(_g)_g.classList.remove('on');}
-  stopSpeech();
+  stopSpeech(); hideDir();
   me=null; if(meDot){meDot.style.display='none';} follow=false;
   rotateOn=false; mapHeading=0; riderHeading=null; lastPos=null; gpsHeading=null; compassHeading=null; lastSpeed=0;
   movingMode=false; hvx=null; hvy=null;
@@ -1527,7 +1582,7 @@ function loadTour(i){
   document.getElementById('tourName').textContent=DATA.tour.name;
   document.getElementById('pill').textContent=`${DATA.km} km · ${DATA.dur}`;
   const _ss=(DATA.zones&&DATA.zones.stopScale)||1; DATA.stops.forEach(s=>{ const base=(s.r!=null?s.r:Math.max(55, distToRoute(s.lat,s.lon)+30)); s._r=base*_ss; }); // per-stop arrival radius (individual × global scale)
-  stopRI=DATA.stops.map(s=>nearestRouteIdx(s.lat,s.lon));   // route index nearest each stop (for leg highlighting)
+  { let _pri=0; stopRI=DATA.stops.map(s=>{ const ri=nearestRouteIdxFrom(s.lat,s.lon,_pri); _pri=ri; return ri; }); }   // progressive: each stop maps forward of the previous, so a loop's finish lands at the route end
   order=DATA.stops.map((_,i)=>i);            // default: all stops in original order
   hubIdx=DATA.stops.findIndex(s=>/zoomr zone/i.test(s.name)); if(hubIdx<0) hubIdx=DATA.stops.findIndex(s=>/qv cafe/i.test(s.name)); if(hubIdx<0) hubIdx=0;
   maneuvers = DATA._man || (DATA._man=buildManeuvers(DATA));   // turn-by-turn cues along the path
