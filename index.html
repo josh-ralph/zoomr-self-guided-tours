@@ -720,7 +720,7 @@ function collapseSheet(){ if(landscapeMode()) return; const hc=document.getEleme
 /* ---------- Live position engine ---------- */
 const ARRIVE=60, OFFROUTE=45;
 let reached=new Set(), nextStop=0, voiceOn=true, watchId=null;
-let touring=false, headingToStart=false, skipping=false, previewing=false, returningToHub=false;
+let touring=false, headingToStart=false, skipping=false, previewing=false, returningToHub=false, pendingArrival=false;
 let phase='enroute';             // 'atstop' (arrived, narration done) | 'enroute' (heading to nextStop)
 let recovering=false, recoveryRoute=null, recMan=[], recoveryMode='path', recTargetIdx=-1; const REJOIN=22;   // off-path recovery state
 let rerouteOptedOut=false, rerouteFetching=false, stopRI=[];   // auto-reroute opt-out + per-stop route index
@@ -837,7 +837,7 @@ function playSeg(seg,onDone,skippable){
   if(seg.audio){ narrMedium='audio'; playStopAudio(seg.audio, done, ()=>{ if(hasText){ narrMedium='tts'; speak(seg.text,'stop',false,done); } else done(); }); return; }
   narrMedium='tts'; speak(seg.text,'stop',false,done);
 }
-function resetProgress(){reached=new Set();nextStop=0;cur=0;skipping=false;renderPanel();}
+function resetProgress(){reached=new Set();nextStop=0;cur=0;skipping=false;pendingArrival=false;renderPanel();}
 const COMPASS8=['north','north-east','east','south-east','south','south-west','west','north-west'];
 function cardinal(b){ return COMPASS8[Math.round((((b%360)+360)%360)/45)%8]; }
 function routeIdxAhead(ri,meters){ let a=0,k=ri,n=DATA.route.length; while(k<n-1){ a+=haversine(DATA.route[k][0],DATA.route[k][1],DATA.route[k+1][0],DATA.route[k+1][1]); if(a>=meters) return k+1; k++; } return n-1; }
@@ -927,6 +927,8 @@ function openSkipWarn(){ document.getElementById('skipWarnModal').classList.add(
 /* ---------- turn-by-turn (geometric, from the drawn path + free OSM street names) ---------- */
 let maneuvers=[];
 let navIdx=0;   // monotonic progress along DATA.route, so self-overlapping loops don't mis-match position
+let routeCum=[];   // cumulative along-route distance per point (for distance-based "passed" checks)
+function routeDistAt(i){ return (routeCum && routeCum[i]!=null) ? routeCum[i] : 0; }
 let toStartTriedAt=0;   // throttle live route-to-start attempts (avoids spamming when GPS can't snap to a road)
 function bearing(a,b){const φ1=rad(a[0]),φ2=rad(b[0]),Δλ=rad(b[1]-a[1]);
   const y=Math.sin(Δλ)*Math.cos(φ2), x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
@@ -1001,10 +1003,10 @@ function advanceNavIdx(lat,lon){
 }
 function upcomingTurn(lat,lon){
   if(!maneuvers.length) return null;
-  const ri=advanceNavIdx(lat,lon);
+  const ri=advanceNavIdx(lat,lon), here=routeDistAt(ri);
   for(const m of maneuvers){
     if(m.passed) continue;
-    if(ri>m.i+2){ m.passed=true; continue; }                    // we've driven past it
+    if(here > routeDistAt(m.i)+10){ m.passed=true; continue; }   // ~10 m past it — distance-based, so uneven route point spacing can't hide a turn
     return {m, dist:haversine(lat,lon,m.lat,m.lon)};
   }
   return null;
@@ -1108,7 +1110,11 @@ function updatePosition(lat,lon,acc){
   // touring: ordered proximity (arrivals fire even when off-route, so the tour resumes on its own)
   if(nextStop<order.length){
     const ns=stopAt(nextStop);
-    if(haversine(lat,lon,ns.lat,ns.lon) < (ns._r||ARRIVE)){ arrive(nextStop); }
+    if(haversine(lat,lon,ns.lat,ns.lon) < (ns._r||ARRIVE)) pendingArrival=true;   // arm once inside the zone — won't be lost if we ride out while turning
+    if(pendingArrival){
+      const _t=upcomingTurn(lat,lon);
+      if(!(_t && _t.dist < Math.max((_t.m.r||85), 45))){ pendingArrival=false; arrive(nextStop); }   // hold the arrival while a turn is imminent so turn cues are never talked over
+    }
   }
   // once they ride away from the stop, switch focus to the next leg (still no narration until arrival)
   if(phase==='atstop' && nextStop<order.length && haversine(lat,lon,stopAt(cur).lat,stopAt(cur).lon) > ((stopAt(cur)._r||ARRIVE)+5)){ goEnroute(); }
@@ -1178,7 +1184,7 @@ function updatePrimary(){
 }
 function endTourNow(){ if(confirm('End the tour and return to the tour list?')){ clearLive(); showPicker(); } }
 function beginTour(){
-  touring=true; headingToStart=false; previewing=false; returningToHub=false; setStartCta(false);
+  touring=true; headingToStart=false; previewing=false; returningToHub=false; pendingArrival=false; setStartCta(false);
   reached=new Set(); nextStop=0; skipping=false;
   follow=true; rotateOn=true; state.z=Math.max(state.z,16);   // follow + heading-up while touring
   if(riderHeading!=null) mapHeading=riderHeading;
@@ -1603,8 +1609,9 @@ function loadTour(i){
   body.innerHTML=''; delete body.dataset.init; chatHistory=[]; narrationCache={};   // reset chat + narration for new tour
   document.getElementById('tourName').textContent=DATA.tour.name;
   document.getElementById('pill').textContent=`${DATA.km} km · ${DATA.dur}`;
-  const _ss=(DATA.zones&&DATA.zones.stopScale)||1; DATA.stops.forEach(s=>{ const base=(s.r!=null?s.r:Math.max(55, distToRoute(s.lat,s.lon)+30)); s._r=base*_ss; }); // per-stop arrival radius (individual × global scale)
+  const _ss=(DATA.zones&&DATA.zones.stopScale)||1; DATA.stops.forEach(s=>{ const base=(s.r!=null?s.r:Math.max(25, distToRoute(s.lat,s.lon)+15)); s._r=base*_ss; }); // per-stop arrival radius (individual × global scale) — tight so "arriving" fires right at the stop, not in nearby turns
   { let _pri=0; stopRI=DATA.stops.map(s=>{ const ri=nearestRouteIdxFrom(s.lat,s.lon,_pri); _pri=ri; return ri; }); }   // progressive: each stop maps forward of the previous, so a loop's finish lands at the route end
+  { const R=DATA.route; routeCum=[0]; for(let i=1;i<R.length;i++) routeCum[i]=routeCum[i-1]+haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); }   // cumulative distance per point
   order=DATA.stops.map((_,i)=>i);            // default: all stops in original order
   hubIdx=DATA.stops.findIndex(s=>/zoomr zone/i.test(s.name)); if(hubIdx<0) hubIdx=DATA.stops.findIndex(s=>/qv cafe/i.test(s.name)); if(hubIdx<0) hubIdx=0;
   maneuvers = DATA._man || (DATA._man=buildManeuvers(DATA));   // turn-by-turn cues along the path
