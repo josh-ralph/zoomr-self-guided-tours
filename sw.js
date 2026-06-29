@@ -3,7 +3,7 @@
    + map tiles, so a tour keeps working on spotty/no signal. Live AI-guide and
    routing calls are never cached (they degrade gracefully on their own).
    Bump CACHE_VER to force clients onto a new version. */
-const CACHE_VER = 'v3';
+const CACHE_VER = 'v4';
 const SHELL = 'zoomr-shell-' + CACHE_VER;
 const TILES = 'zoomr-tiles-' + CACHE_VER;
 const TILE_MAX = 1200;            // cap cached tiles (LRU-ish) to bound storage
