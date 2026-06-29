@@ -97,8 +97,11 @@
   .mrow .mtog{border:none;background:#eef0f4;width:30px;height:30px;border-radius:8px;font-size:15px;cursor:pointer;flex:0 0 auto}
   .lbtn.go{background:#10b981;color:#fff}
   .status{position:absolute;top:54px;left:12px;max-width:72%;text-align:left;z-index:18;pointer-events:none;background:rgba(29,34,48,.92);color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:14px;line-height:1.35;white-space:normal;box-shadow:0 2px 8px rgba(0,0,0,.2)}
-  .dircard{position:absolute;top:10px;left:50%;transform:translateX(-50%) translateY(-170%);z-index:23;display:flex;align-items:center;gap:12px;background:rgba(29,34,48,.96);color:#fff;border-radius:16px;padding:10px 16px 10px 13px;min-width:200px;max-width:88%;box-shadow:0 6px 20px rgba(0,0,0,.3);transition:transform .38s cubic-bezier(.22,1,.36,1);pointer-events:none}
-  .dircard.show{transform:translateX(-50%) translateY(0)}
+  .navstack{position:absolute;top:10px;left:50%;transform:translateX(-50%) translateY(-205%);z-index:23;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:90%;transition:transform .38s cubic-bezier(.22,1,.36,1);pointer-events:none}
+  .navstack.show{transform:translateX(-50%) translateY(0)}
+  .dircard{display:flex;align-items:center;gap:12px;background:rgba(29,34,48,.96);color:#fff;border-radius:16px;padding:10px 16px 10px 13px;min-width:200px;max-width:100%;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+  .etacard{display:none;align-items:center;gap:5px;background:rgba(29,34,48,.88);color:#cfe0e6;border-radius:999px;padding:5px 14px;font-size:12.5px;font-weight:600;box-shadow:0 3px 10px rgba(0,0,0,.22)}
+  .etacard b{color:#fff;font-weight:800}
   .dircard .dir-ico{flex:0 0 auto;color:#7fe0d8;display:flex}
   .dircard .dir-ico svg{width:34px;height:34px}
   .dircard .dir-dist{font-size:21px;font-weight:800;line-height:1.05}
@@ -209,7 +212,10 @@
     </div>
     <div class="mapbtns"><button id="zin">+</button><button id="zout">−</button></div>
     <div class="status" id="status" style="display:none"></div>
-    <div class="dircard" id="dirCard"><div class="dir-ico" id="dirIco"></div><div><div class="dir-dist" id="dirDist"></div><div class="dir-instr" id="dirInstr"></div></div></div>
+    <div class="navstack" id="navStack">
+      <div class="dircard" id="dirCard"><div class="dir-ico" id="dirIco"></div><div><div class="dir-dist" id="dirDist"></div><div class="dir-instr" id="dirInstr"></div></div></div>
+      <div class="etacard" id="etaCard"></div>
+    </div>
     <button class="reroute-fab" id="rerouteBtn">🧭 Route me back</button>
     <div class="livebar">
       <div class="livebtns">
@@ -724,8 +730,20 @@ const fmt=m=> m<1000 ? Math.round(m/5)*5+' m' : (m/1000).toFixed(1)+' km';
 let statusTimer=null;
 function setStatus(t,warn,autohide){clearTimeout(statusTimer);hideDir();statusEl.style.display='block';statusEl.textContent=t;statusEl.classList.toggle('warn',!!warn);if(autohide)statusTimer=setTimeout(()=>{statusEl.style.display='none';},5000);}
 /* Google-style directions card (top-center). Mutually exclusive with the status pill. */
-function showDir(dir,instr,dist){ const c=document.getElementById('dirCard'); if(!c) return; const ic=document.getElementById('dirIco'),di=document.getElementById('dirDist'),ins=document.getElementById('dirInstr'); if(ic) ic.innerHTML=arrowSvg(dir); if(di) di.textContent=dist||''; if(ins) ins.textContent=instr||''; c.classList.add('show'); if(statusEl) statusEl.style.display='none'; }
-function hideDir(){ const c=document.getElementById('dirCard'); if(c) c.classList.remove('show'); }
+function showDir(dir,instr,dist){ const ic=document.getElementById('dirIco'),di=document.getElementById('dirDist'),ins=document.getElementById('dirInstr'); if(ic) ic.innerHTML=arrowSvg(dir); if(di) di.textContent=dist||''; if(ins) ins.textContent=instr||''; const ns=document.getElementById('navStack'); if(ns) ns.classList.add('show'); if(statusEl) statusEl.style.display='none'; }
+function hideDir(){ const ns=document.getElementById('navStack'); if(ns) ns.classList.remove('show'); clearEta(); }
+function setEta(html){ const e=document.getElementById('etaCard'); if(!e) return; e.innerHTML=html; e.style.display='flex'; }
+function clearEta(){ const e=document.getElementById('etaCard'); if(e) e.style.display='none'; }
+let etaSpd=0;   // smoothed travel speed (m/s) used for ETA
+/* ETA to a stop: remaining route distance ÷ smoothed speed (floored so it stays steady at stops) */
+function stopEta(stopPos){
+  if(stopPos==null || stopPos>=order.length || !DATA.route){ clearEta(); return; }
+  const ti=stopRI[order[stopPos]]; if(ti==null){ clearEta(); return; }
+  const remain=Math.max(0, cumDistToIdx(ti)-cumDistToIdx(navIdx));
+  const spd=Math.min(6.95, Math.max(2.6, etaSpd||0));       // floor ~9 km/h, cap 25 km/h (scooter top speed)
+  const mins=remain/spd/60, name=stopAt(stopPos).name;
+  setEta(mins<1 ? ('🕑 Arriving · '+name) : ('🕑 <b>'+Math.round(mins)+' min</b> to '+name));
+}
 let speechQ=[], speaking=false, preferredVoice=null;
 function cleanForSpeech(t){
   if(!t) return '';
@@ -1019,6 +1037,7 @@ function guideRecovery(lat,lon,toLabel){
   const t=recUpcoming(lat,lon);
   if(t && t.dist<95){ if(voiceOn && !t.m._said && t.dist<55){ speak(maneuverText(t.m),'turn'); t.m._said=true; } showDir(effectiveDir(t.m), maneuverText(t.m), fmt(t.dist)); }
   else showDir('straight', 'Follow the route '+toLabel, fmt(remain));
+  clearEta();   // ETA is route-based; not meaningful while off-route/rerouting
 }
 function endRecovery(rejoined){ recovering=false; recoveryRoute=null; recMan=[]; recoveryMode='path'; recTargetIdx=-1; if(me){ navIdx=nearestRouteIdx(me.lat,me.lon); } updateRerouteBtn(false); render(); if(rejoined){ if(voiceOn) speak('You are back on the tour route.','turn'); setStatus('✅ Back on the tour route'); } }
 function updateRerouteBtn(offRoute){ const b=document.getElementById('rerouteBtn'); if(!b) return; const vis=(routeEndpoint && !rerouteOptedOut && (recovering || rerouteFetching || offRoute)); b.style.display=vis?'flex':'none'; b.textContent='cancel reroute'; }
@@ -1069,6 +1088,7 @@ function tilePrewarm(){                                     // gently warm the b
 
 function updatePosition(lat,lon,acc){
   me={lat,lon,acc:acc||15};
+  if(lastSpeed>0.6) etaSpd = etaSpd ? etaSpd*0.85+lastSpeed*0.15 : lastSpeed;   // smooth GPS speed for ETA
   startNav();                                  // smooth easing handles centering + rendering the dot
   if(previewing) return;                       // preview is manual step-through; just show the live dot
   if(returningToHub){                          // tour over, guiding back to the Zoomr Zone
@@ -1129,9 +1149,11 @@ function updatePosition(lat,lon,acc){
     } else {
       showDir('straight', 'Continue', fmt(turn.dist));            // distance to the next turn
     }
+    stopEta(nextStop);
     return;
   }
   showDir('straight', 'Continue to '+ns.name, fmt(haversine(lat,lon,ns.lat,ns.lon)));
+  stopEta(nextStop);
 }
 /* ----- start-tour flow ----- */
 function setStartCta(show,mode){
