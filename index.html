@@ -986,6 +986,21 @@ function nearestRouteIdx(lat,lon){let best=1e9,bi=0;const R=DATA.route;for(let i
 /* nearest route point at or after `from` — lets stops map progressively so a finish
    stop sharing the start's location maps to the route END, not the start (loop tours). */
 function nearestRouteIdxFrom(lat,lon,from){const R=DATA.route;let best=1e9,bi=from|0;for(let i=Math.max(0,from|0);i<R.length;i++){const d=haversine(lat,lon,R[i][0],R[i][1]);if(d<best){best=d;bi=i;}}return bi;}
+/* First point (at or after `from`) where the route actually PASSES the stop — i.e.
+   the first local-minimum of distance that comes within `thr`. On an out-and-back or
+   loop, a stop near the start also sits near the route's END, so plain nearest-point
+   maps it to that later pass and the ETA reads tens of minutes while you're on top of
+   it. Taking the first approach keeps stop indices in tour order so ETA is correct. */
+function firstApproachIdx(lat,lon,from,thr){
+  const R=DATA.route; let bi=-1, lb=1e9, lmin=from|0, rising=0;
+  for(let i=Math.max(0,from|0);i<R.length;i++){
+    const d=haversine(lat,lon,R[i][0],R[i][1]);
+    if(d<lb){ lb=d; lmin=i; rising=0; }
+    else if(++rising>=3 && lb<thr){ bi=lmin; break; }
+  }
+  if(bi<0) bi=nearestRouteIdxFrom(lat,lon,from);   // never came within thr — fall back to nearest ahead
+  return bi;
+}
 /* Progress index that only searches a window AHEAD of where we already are, and
    never moves backward. This stops a self-overlapping route (out-and-backs, loops
    that finish near the start) from snapping our position onto a later segment and
@@ -1621,7 +1636,7 @@ function loadTour(i){
   document.getElementById('tourName').textContent=DATA.tour.name;
   document.getElementById('pill').textContent=`${DATA.km} km · ${DATA.dur}`;
   const _ss=(DATA.zones&&DATA.zones.stopScale)||1; DATA.stops.forEach(s=>{ const base=(s.r!=null?s.r:Math.max(25, distToRoute(s.lat,s.lon)+15)); s._r=base*_ss; }); // per-stop arrival radius (individual × global scale) — tight so "arriving" fires right at the stop, not in nearby turns
-  { let _pri=0; stopRI=DATA.stops.map(s=>{ const ri=nearestRouteIdxFrom(s.lat,s.lon,_pri); _pri=ri; return ri; }); }   // progressive: each stop maps forward of the previous, so a loop's finish lands at the route end
+  { let _pri=0; stopRI=DATA.stops.map(s=>{ const ri=firstApproachIdx(s.lat,s.lon,_pri,Math.max((s._r||60),50)); _pri=ri; return ri; }); }   // first approach in tour order (not global nearest, which maps early stops onto a loop's return leg and breaks the ETA)
   { const R=DATA.route; routeCum=[0]; for(let i=1;i<R.length;i++) routeCum[i]=routeCum[i-1]+haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); }   // cumulative distance per point
   order=DATA.stops.map((_,i)=>i);            // default: all stops in original order
   hubIdx=DATA.stops.findIndex(s=>/zoomr zone/i.test(s.name)); if(hubIdx<0) hubIdx=DATA.stops.findIndex(s=>/qv cafe/i.test(s.name)); if(hubIdx<0) hubIdx=0;
