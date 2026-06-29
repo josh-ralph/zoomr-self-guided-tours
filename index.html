@@ -741,8 +741,9 @@ function stopEta(stopPos){
   const ti=stopRI[order[stopPos]]; if(ti==null){ clearEta(); return; }
   const remain=Math.max(0, cumDistToIdx(ti)-cumDistToIdx(navIdx));
   const spd=Math.min(6.95, Math.max(2.6, etaSpd||0));       // floor ~9 km/h, cap 25 km/h (scooter top speed)
-  const mins=remain/spd/60, name=stopAt(stopPos).name;
-  setEta(mins<1 ? ('🕑 Arriving · '+name) : ('🕑 <b>'+Math.round(mins)+' min</b> to '+name));
+  const s=stopAt(stopPos), name=s.name, mins=remain/spd/60;
+  const inZone = me && haversine(me.lat,me.lon,s.lat,s.lon) < (s._r||ARRIVE);   // "Arriving" exactly when we enter the stop's trigger zone (same test that fires the arrival)
+  setEta(inZone ? ('🕑 Arriving · '+name) : ('🕑 <b>'+Math.max(1,Math.round(mins))+' min</b> to '+name));
 }
 let speechQ=[], speaking=false, preferredVoice=null;
 function cleanForSpeech(t){
@@ -991,7 +992,14 @@ function nearestRouteIdxFrom(lat,lon,from){const R=DATA.route;let best=1e9,bi=fr
    wrongly marking upcoming turns as already passed. */
 function advanceNavIdx(lat,lon){
   const R=DATA.route; if(!R||!R.length) return navIdx;
-  const start=Math.max(0, navIdx-2), hi=Math.min(R.length-1, navIdx+60);
+  // never let position snap past the next un-passed turn (+a small margin). On a
+  // route that loops back on itself within GPS error (e.g. a tight detour where the
+  // outbound and return legs run close together), the raw nearest-point can jump
+  // across the whole knot, silently skipping the turns in between and dumping you
+  // into the next stop's arrival zone early. Capping the forward search prevents that.
+  let cap=R.length-1;
+  if(maneuvers && maneuvers.length){ for(const m of maneuvers){ if(!m.passed){ cap=Math.min(R.length-1,(m.i|0)+5); break; } } }
+  const start=Math.max(0, navIdx-2), hi=Math.min(cap, navIdx+60);
   let best=1e9, bi=navIdx, rising=0;
   for(let i=start;i<=hi;i++){
     const d=haversine(lat,lon,R[i][0],R[i][1]);
@@ -1006,7 +1014,10 @@ function upcomingTurn(lat,lon){
   const ri=advanceNavIdx(lat,lon), here=routeDistAt(ri);
   for(const m of maneuvers){
     if(m.passed) continue;
-    if(here > routeDistAt(m.i)+10){ m.passed=true; continue; }   // ~10 m past it — distance-based, so uneven route point spacing can't hide a turn
+    if(here > routeDistAt(m.i)+10){                              // ~10 m past it — distance-based, so uneven route point spacing can't hide a turn
+      if(voiceOn && !m.said && !previewing){ speak(maneuverText(m),'turn'); m.said=true; }   // fallback: if we reached the turn without ever entering its (maybe tiny) radius, still call it out so clustered turns are never silently dropped
+      m.passed=true; continue;
+    }
     return {m, dist:haversine(lat,lon,m.lat,m.lon)};
   }
   return null;
