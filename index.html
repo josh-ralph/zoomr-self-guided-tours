@@ -525,9 +525,16 @@ function render(){
     acc=`<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="${r.toFixed(1)}" fill="rgba(30,144,255,.15)" stroke="rgba(30,144,255,.5)" stroke-width="1"/>`;
   }
   let rsvg='';
-  if(recoveryRoute&&recoveryRoute.length){ const rpts=recoveryRoute.map(([la,lo])=>`${(lonToWX(lo,z)-originX).toFixed(1)},${(latToWY(la,z)-originY).toFixed(1)}`).join(' '); rsvg=`<polyline points="${rpts}" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" opacity="0.55"/><polyline points="${rpts}" fill="none" stroke="#e8590c" stroke-width="5.5" stroke-dasharray="1 13" stroke-linecap="round"/>`; }
+  if(recoveryRoute&&recoveryRoute.length){
+    const rri = me ? nearestIdxOn(recoveryRoute, dlat, dlon) : 0;      // drop the part already travelled so the line shrinks behind the rider
+    const ahead = recoveryRoute.slice(rri);
+    if(ahead.length>1){ const rpts=ahead.map(([la,lo])=>`${(lonToWX(lo,z)-originX).toFixed(1)},${(latToWY(la,z)-originY).toFixed(1)}`).join(' ');
+      rsvg=`<polyline points="${rpts}" fill="none" stroke="#fff" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" opacity="0.6"/><polyline points="${rpts}" fill="none" stroke="#e8590c" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>`;   // solid, like the tour line, but orange
+    }
+  }
   let legPts='';
-  if(touring && nextStop>0 && nextStop<order.length && stopRI.length){ let a=stopRI[order[nextStop-1]], b=stopRI[order[nextStop]]; if(a>b){const _t=a;a=b;b=_t;} legPts=DATA.route.slice(a,b+1).map(([la,lo])=>`${(lonToWX(lo,z)-originX).toFixed(1)},${(latToWY(la,z)-originY).toFixed(1)}`).join(' '); }
+  if(touring && nextStop>0 && nextStop<order.length && stopRI.length){ let a=stopRI[order[nextStop-1]], b=stopRI[order[nextStop]]; if(a>b){const _t=a;a=b;b=_t;} a=Math.max(a, Math.min(navIdx, b));   // start the bright leg at the rider so the ridden part fades to the base colour
+    legPts=DATA.route.slice(a,b+1).map(([la,lo])=>`${(lonToWX(lo,z)-originX).toFixed(1)},${(latToWY(la,z)-originY).toFixed(1)}`).join(' '); }
   const fd = legPts ? 0.5 : 1;                                  // fade non-current legs so overlapping roads aren't confusing
   let routeSvg=`<polyline points="${pts}" fill="none" stroke="#fff" stroke-width="9" stroke-linejoin="round" stroke-linecap="round" opacity="${(0.6*fd).toFixed(2)}"/><polyline points="${pts}" fill="none" stroke="#0E9AA7" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" opacity="${fd}"/>`;
   if(legPts) routeSvg+=`<polyline points="${legPts}" fill="none" stroke="#fff" stroke-width="9.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.7"/><polyline points="${legPts}" fill="none" stroke="#0E9AA7" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>`;
@@ -725,6 +732,7 @@ let reached=new Set(), nextStop=0, voiceOn=true, watchId=null;
 let touring=false, headingToStart=false, skipping=false, previewing=false, returningToHub=false, pendingArrival=false, announcedStartArrival=false;
 let phase='enroute';             // 'atstop' (arrived, narration done) | 'enroute' (heading to nextStop)
 let recovering=false, recoveryRoute=null, recMan=[], recoveryMode='path', recTargetIdx=-1; const REJOIN=22;   // off-path recovery state
+let recFetchedAt=0; const REC_STRAY=42;   // when the rider drifts >REC_STRAY m off the recovery line, recompute a fresh reroute (throttled)
 let rerouteOptedOut=false, rerouteFetching=false, stopRI=[];   // auto-reroute opt-out + per-stop route index
 let hubIdx=0, reviiSeen=false;   // Zoomr Zone stop index / one-time Revii intro shown
 const statusEl=document.getElementById('status');
@@ -988,6 +996,16 @@ function nearestRouteIdx(lat,lon){let best=1e9,bi=0;const R=DATA.route;for(let i
 /* nearest route point at or after `from` — lets stops map progressively so a finish
    stop sharing the start's location maps to the route END, not the start (loop tours). */
 function nearestRouteIdxFrom(lat,lon,from){const R=DATA.route;let best=1e9,bi=from|0;for(let i=Math.max(0,from|0);i<R.length;i++){const d=haversine(lat,lon,R[i][0],R[i][1]);if(d<best){best=d;bi=i;}}return bi;}
+/* nearest route point within [lo,hi] — used to rejoin the CURRENT leg after an off-route
+   detour, so a loop's later section (which may be geographically closer) can't pull the
+   reroute ahead past the next stop. */
+function nearestRouteIdxInRange(lat,lon,lo,hi){const R=DATA.route;lo=Math.max(0,lo|0);hi=Math.min(R.length-1,hi|0);if(hi<lo)hi=lo;let best=1e9,bi=lo;for(let i=lo;i<=hi;i++){const d=haversine(lat,lon,R[i][0],R[i][1]);if(d<best){best=d;bi=i;}}return bi;}
+/* end of the leg we're currently riding (route index of the next stop) */
+function currentLegEndIdx(){ return (nextStop<order.length && stopRI.length && stopRI[order[nextStop]]!=null) ? stopRI[order[nextStop]] : (DATA.route.length-1); }
+/* walk forward from an index until ~`dist` metres along the route */
+function advanceIdxByDist(from,dist){ const R=DATA.route; let i=Math.max(0,from|0),acc=0; while(i<R.length-1 && acc<dist){ acc+=haversine(R[i][0],R[i][1],R[i+1][0],R[i+1][1]); i++; } return i; }
+/* walk backward from an index until ~`dist` metres along the route */
+function retreatIdxByDist(from,dist){ const R=DATA.route; let i=Math.min(R.length-1,from|0),acc=0; while(i>0 && acc<dist){ acc+=haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); i--; } return i; }
 /* First point (at or after `from`) where the route actually PASSES the stop — i.e.
    the first local-minimum of distance that comes within `thr`. On an out-and-back or
    loop, a stop near the start also sits near the route's END, so plain nearest-point
@@ -1048,16 +1066,20 @@ function fetchRoute(from,to){
     .then(r=>{ if(!r.ok) throw new Error('route '+r.status); return r.json(); })
     .then(j=>{ const f=j.features&&j.features[0]; const c=f&&f.geometry&&f.geometry.coordinates; if(!c||!c.length) throw new Error('no route'); return c.map(p=>[p[1],p[0]]); });
 }
-async function startRecovery(){
+async function startRecovery(quiet){
   if(!me||rerouteFetching||!routeEndpoint) return;
-  rerouteFetching=true; setStatus('Finding the best way back…'); updateRerouteBtn(true);
-  const ri=nearestRouteIdx(me.lat,me.lon), tgt=DATA.route[ri];
+  rerouteFetching=true; recFetchedAt=performance.now(); if(!quiet) setStatus('Finding the best way back…'); updateRerouteBtn(true);
+  const legEnd=Math.max(navIdx,currentLegEndIdx());
+  let ri=nearestRouteIdxInRange(me.lat,me.lon, navIdx, legEnd);
+  ri=Math.min(advanceIdxByDist(ri, 30), legEnd);   // nudge the rejoin ~30 m forward so you merge heading the tour's direction, not backtracking to a point behind you
+  const tgt=DATA.route[ri];
   try{
     recoveryRoute=await fetchRoute([me.lon,me.lat],[tgt[1],tgt[0]]);
     recMan=computeManeuversFor(recoveryRoute); recMan.forEach(m=>{ m._passed=false; m._said=false; });
-    recovering=true; recoveryMode='path'; follow=true; rotateOn=true;
-    if(voiceOn) speak('Rerouting you back to the tour. Follow the highlighted route.','turn');
+    recovering=true; recoveryMode='path'; follow=true; rotateOn=true; simRecDist=0;
+    if(voiceOn && !quiet) speak('Rerouting.','turn');
     render(); updateRerouteBtn(true);
+    try{ if(window.__zoomrPreview) parent.postMessage({zoomrRecovering:true},'*'); }catch(_){}   // let the bench offer "Follow reroute"
   }catch(e){ recoveryRoute=null; recovering=false; setStatus('Could not find a route — head back toward the path.', true); }
   finally{ rerouteFetching=false; }
 }
@@ -1077,7 +1099,34 @@ function guideRecovery(lat,lon,toLabel){
   }
   clearEta();   // ETA is route-based; not meaningful while off-route/rerouting
 }
-function endRecovery(rejoined){ recovering=false; recoveryRoute=null; recMan=[]; recoveryMode='path'; recTargetIdx=-1; if(me){ navIdx=nearestRouteIdx(me.lat,me.lon); } updateRerouteBtn(false); render(); if(rejoined){ if(voiceOn) speak('You are back on the tour route.','turn'); setStatus('✅ Back on the tour route'); } }
+/* When we rejoin at/near a main-route turn, is that turn real for us? Compare the
+   direction we're actually merging in (heading) with the road AFTER the turn. If we
+   still have to swing that way (and it matches the instruction's side), keep it —
+   announce + card. If we're already aligned, or it points the other way, it's just a
+   merge artifact from a different approach, so drop it. */
+function mergeTurnStillNeeded(m, mh){
+  if(mh==null) return false;
+  const R=DATA.route, jf=advanceIdxByDist(m.i,18), jb=retreatIdxByDist(m.i,18);
+  if(jf<=m.i || jb>=m.i) return false;
+  const outB=bearing(R[m.i], R[jf]);                     // road heading AFTER the turn
+  const inB =bearing(R[jb], R[m.i]);                     // road heading INTO the turn
+  const dOut=Math.abs(((outB-mh+540)%360)-180);          // how far our merge heading is from the exit direction
+  const dIn =Math.abs(((inB -mh+540)%360)-180);          // ...from the approach direction
+  if(dOut < 25) return false;                            // already pointing the way the road goes after the turn -> nothing to announce
+  return dIn < dOut;                                     // more aligned with the approach than the exit -> we still have to make this turn -> keep it
+}
+function endRecovery(rejoined){
+  const _recRoute=recoveryRoute;                         // capture before clearing (for the merge heading)
+  recovering=false; recoveryRoute=null; recMan=[]; recoveryMode='path'; recTargetIdx=-1; simRecDist=0;
+  if(me){ navIdx=nearestRouteIdxInRange(me.lat,me.lon, navIdx, Math.max(navIdx,currentLegEndIdx())); }   // land on the current leg, never a later section
+  const _mh=(riderHeading!=null)?riderHeading:((_recRoute&&_recRoute.length>1)?bearing(_recRoute[_recRoute.length-2],_recRoute[_recRoute.length-1]):null);
+  const _rj=routeDistAt(navIdx);
+  maneuvers.forEach(m=>{ const _md=routeDistAt(m.i);
+    if(_md < _rj){ m.passed=true; m.said=true; }                                    // turns bypassed during the detour -> don't retro-announce
+    else if(_md < _rj+30 && !mergeTurnStillNeeded(m,_mh)){ m.passed=true; m.said=true; }   // a turn at the merge that doesn't match how we're rejoining -> drop it (a matching one is left to announce + show)
+  });
+  updateRerouteBtn(false); render(); try{ if(window.__zoomrPreview) parent.postMessage({zoomrRecovering:false},'*'); }catch(_){}
+  if(rejoined){ if(voiceOn) speak('You are back on the tour route.','turn'); setStatus('✅ Back on the tour route'); } }
 function updateRerouteBtn(offRoute){ const b=document.getElementById('rerouteBtn'); if(!b) return; const vis=(routeEndpoint && !rerouteOptedOut && (recovering || rerouteFetching || offRoute)); b.style.display=vis?'flex':'none'; b.textContent='cancel reroute'; }
 /* Cancel reroute = reset the run: stop recovery + touring and return to the
    pre-start state so the rider has to tap Start Tour again (no auto-restart). */
@@ -1180,7 +1229,11 @@ function updatePosition(lat,lon,acc){
       else { guideRecovery(lat,lon,'to '+stopAt(recTargetIdx).name); return; }
     } else {
       if(off<REJOIN){ endRecovery(true); }                 // rejoined the tour -> resume below
-      else { guideRecovery(lat,lon,'back on tour'); return; }
+      else {
+        const _ri=nearestIdxOn(recoveryRoute,lat,lon), offRec=haversine(lat,lon,recoveryRoute[_ri][0],recoveryRoute[_ri][1]);
+        if(offRec>REC_STRAY && routeEndpoint && !rerouteFetching && !rerouteOptedOut && (performance.now()-recFetchedAt>10000)){ startRecovery(true); return; }   // didn't follow the reroute -> fresh reroute from where they actually are (live, throttled, silent so it doesn't re-announce near the merge)
+        guideRecovery(lat,lon,'back on tour'); return;
+      }
     }
   }
   if(nextStop===0 && !reached.has(0) && !recovering){          // heading to the start of the tour
@@ -1722,16 +1775,28 @@ fetch('tours.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{ con
 /* offline caching — https only, no manifest (stays a website, not an installable app) */
 if('serviceWorker' in navigator && location.protocol==='https:'){ window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
 // Test-bench (admin only): receive previewed data + simulation commands via postMessage
-let simTimer=null, simDist=0, simSpeedKmh=20, simLastPos=null, simTotal=0;
-function simPosAt(dist){ const R=DATA.route; let acc=0; for(let i=1;i<R.length;i++){ const d=haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); if(acc+d>=dist){ const t=(dist-acc)/(d||1); return {lat:R[i-1][0]+(R[i][0]-R[i-1][0])*t, lon:R[i-1][1]+(R[i][1]-R[i-1][1])*t, done:false}; } acc+=d; } const last=R[R.length-1]; return {lat:last[0],lon:last[1],done:true}; }
+let simTimer=null, simDist=0, simSpeedKmh=20, simLastPos=null, simTotal=0, simManual=false, simRecDist=0;
+function posAlongRoute(R,dist){ let acc=0; for(let i=1;i<R.length;i++){ const d=haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); if(acc+d>=dist){ const t=(dist-acc)/(d||1); return {lat:R[i-1][0]+(R[i][0]-R[i-1][0])*t, lon:R[i-1][1]+(R[i][1]-R[i-1][1])*t, done:false}; } acc+=d; } const last=R[R.length-1]; return {lat:last[0],lon:last[1],done:true}; }
+function simPosAt(dist){ return posAlongRoute(DATA.route, dist); }
 function simStop(){ if(simTimer){ clearInterval(simTimer); simTimer=null; } }
 function routeLen(R){ let t=0; for(let i=1;i<R.length;i++) t+=haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); return t; }
 function cumDistToIdx(idx){ const R=DATA.route; let t=0; for(let i=1;i<=idx && i<R.length;i++) t+=haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); return t; }
 function reportSim(){ try{ parent.postMessage({zoomrSimAt:simDist, zoomrSimTotal:simTotal, zoomrSimPos:nextStop}, '*'); }catch(e){} }
-function simSeek(dist){ if(!DATA||!DATA.route) return; if(!touring) beginTour(); simDist=Math.max(0,Math.min(dist, simTotal||dist)); simLastPos=null; const p=simPosAt(simDist); navIdx=nearestRouteIdx(p.lat,p.lon); updatePosition(p.lat,p.lon,6); reportSim(); }
-function simJump(pos){ if(!DATA||!order.length) return; if(!touring) beginTour(); const p=Math.max(0,Math.min(pos|0, order.length-1)); reached=new Set(); for(let k=0;k<p;k++) reached.add(k); nextStop=p; phase='enroute'; const s=stopAt(p); simDist=cumDistToIdx(nearestRouteIdx(s.lat,s.lon)); simLastPos=null; navIdx=nearestRouteIdx(s.lat,s.lon); updatePosition(s.lat,s.lon,6); reportSim(); }
+function simSeek(dist){ if(!DATA||!DATA.route) return; simManual=false; if(!touring) beginTour(); simDist=Math.max(0,Math.min(dist, simTotal||dist)); simLastPos=null; const p=simPosAt(simDist); navIdx=nearestRouteIdx(p.lat,p.lon); updatePosition(p.lat,p.lon,6); reportSim(); }
+function simJump(pos){ if(!DATA||!order.length) return; simManual=false; if(!touring) beginTour(); const p=Math.max(0,Math.min(pos|0, order.length-1)); reached=new Set(); for(let k=0;k<p;k++) reached.add(k); nextStop=p; phase='enroute'; const s=stopAt(p); simDist=cumDistToIdx(nearestRouteIdx(s.lat,s.lon)); simLastPos=null; navIdx=nearestRouteIdx(s.lat,s.lon); updatePosition(s.lat,s.lon,6); reportSim(); }
 function simTick(){
   if(!DATA||!DATA.route) return;
+  // if we're off-route with a recovery path, drive ALONG that path back to the tour
+  if(recovering && recoveryRoute && recoveryRoute.length>1){
+    simRecDist += (simSpeedKmh/3.6)*0.1;
+    const p=posAlongRoute(recoveryRoute, simRecDist);
+    if(simLastPos){ const b=bearing(simLastPos,[p.lat,p.lon]); gpsHeading=b; lastSpeed=simSpeedKmh/3.6; setMoving(lastSpeed); pushHeading(b,0.6); }
+    simLastPos=[p.lat,p.lon];
+    updatePosition(p.lat,p.lon,6);                  // may call endRecovery once we rejoin
+    if(!recovering || p.done){ simDist=cumDistToIdx(navIdx); simRecDist=0; simLastPos=null; }   // rejoined -> continue the scripted tour from the rejoin point (navIdx set by endRecovery)
+    reportSim();
+    return;
+  }
   simDist += (simSpeedKmh/3.6)*0.1;                 // metres advanced this 100ms tick
   const p=simPosAt(simDist);
   if(simLastPos){ const b=bearing(simLastPos,[p.lat,p.lon]); gpsHeading=b; lastSpeed=simSpeedKmh/3.6; setMoving(lastSpeed); pushHeading(b,0.6); }
@@ -1741,7 +1806,7 @@ function simTick(){
   if(p.done) simStop();
 }
 function simStart(idx, speed){
-  simStop(); simSpeedKmh=speed||20;
+  simStop(); simManual=false; simSpeedKmh=speed||20;
   if(watchId!=null){ try{navigator.geolocation.clearWatch(watchId);}catch(e){} watchId=null; }  // no real GPS during sim
   loadTour(idx||0);
   simTotal=routeLen(DATA.route); simDist=0; simLastPos=null;
@@ -1756,12 +1821,56 @@ window.addEventListener('message',function(e){ const d=e&&e.data; if(!d) return;
     if(d.zoomrSim==='start') simStart(d.idx||0, d.speed||20);
     else if(d.zoomrSim==='speed') simSpeedKmh=d.speed||20;
     else if(d.zoomrSim==='pause'){ if(simTimer){ clearInterval(simTimer); simTimer=null; } }
-    else if(d.zoomrSim==='resume'){ if(!simTimer && DATA && DATA.route){ simTimer=setInterval(simTick,100); } }
+    else if(d.zoomrSim==='resume'){ if(!simManual && !simTimer && DATA && DATA.route){ simTimer=setInterval(simTick,100); } }
+    else if(d.zoomrSim==='followrec'){ if(DATA && DATA.route){ simManual=false; simRecDist=0; simLastPos=null; if(!simTimer) simTimer=setInterval(simTick,100); } }   // drive along the reroute path back to the tour
     else if(d.zoomrSim==='seek') simSeek(d.dist);
     else if(d.zoomrSim==='jump') simJump(d.pos);
     else if(d.zoomrSim==='stop') simStop();
   }
 });
+/* ---- Test bench only: drag the scooter to move it (e.g. off-route to test reroute) ----
+   Active only inside the admin preview/simulator (window.__zoomrPreview). Grabbing the
+   rider dot pauses the auto-drive and turns dragging into manual GPS: every move calls
+   updatePosition, so reroute, turn cards, ETA and arrivals all respond live. Releasing
+   leaves the scooter where you dropped it. Dragging elsewhere still pans the map. */
+(function(){
+  let sDrag=false;
+  function scooterScreenPos(){
+    if(!me) return null;
+    const dwx=lonToWX(me.lon,state.z)-lonToWX(state.cLon,state.z);
+    const dwy=latToWY(me.lat,state.z)-latToWY(state.cLat,state.z);
+    const [sx,sy]=ROT(dwx,dwy,-mapHeading);                       // world offset -> screen offset (un-rotate)
+    const r=wrap.getBoundingClientRect();
+    return {x:sx+r.left+wrap.clientWidth/2, y:sy+r.top+wrap.clientHeight/2};
+  }
+  function moveDotTo(clientX,clientY){                            // visual only — just relocate the dot, no nav logic
+    const [wx,wy]=screenToWorld(clientX,clientY);
+    me={lat:wyToLat(wy,state.z), lon:wxToLon(wx,state.z), acc:6};
+    dispLat=me.lat; dispLon=me.lon;                              // draw the dot exactly under the cursor (no easing lag)
+    follow=false; render();
+  }
+  wrap.addEventListener('pointerdown',e=>{
+    if(!window.__zoomrPreview || !me) return;
+    if(e.target.closest('button')) return;
+    const p=scooterScreenPos(); if(!p) return;
+    if(Math.hypot(e.clientX-p.x, e.clientY-p.y) > 48) return;     // not on the scooter -> let the map pan
+    sDrag=true; e.stopPropagation();                             // take over from the map-pan handler
+    if(simTimer){ clearInterval(simTimer); simTimer=null; }       // pause auto-drive
+    simManual=true;                                              // manual control now; ▶ won't snap it back onto the route
+    try{ parent.postMessage({zoomrManual:true},'*'); }catch(_){}  // let the admin reset its play button
+    try{wrap.setPointerCapture(e.pointerId);}catch(_){}
+    wrap.style.cursor='grabbing';
+    moveDotTo(e.clientX,e.clientY);
+  },{capture:true});
+  wrap.addEventListener('pointermove',e=>{ if(!sDrag) return; e.stopPropagation(); moveDotTo(e.clientX,e.clientY); },{capture:true});
+  function endSDrag(e){
+    if(!sDrag) return; sDrag=false; e.stopPropagation(); wrap.style.cursor='';
+    endRecovery(false); rerouteFetching=false; rerouteOptedOut=false;   // drop supersedes any active reroute so a NEW drop re-routes from the new spot
+    if(me) updatePosition(me.lat, me.lon, 6);                    // evaluate ONCE at the drop point: fresh reroute / arrival fire here, not mid-drag
+  }
+  wrap.addEventListener('pointerup',endSDrag,{capture:true});
+  wrap.addEventListener('pointercancel',endSDrag,{capture:true});
+})();
 /* local testing: load an edited tours.json by hand (file:// can't fetch it). Hidden on the live site. */
 if(location.protocol==='file:'){ var dt=document.getElementById('devTools'); if(dt) dt.style.display='block'; }
 (function(){ var b=document.getElementById('devLoadBtn'), inp=document.getElementById('devLoad'); if(!b||!inp) return;
