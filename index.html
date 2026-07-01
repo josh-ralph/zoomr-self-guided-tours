@@ -124,6 +124,8 @@
   .stopname{font-size:19px;font-weight:800;letter-spacing:-.3px}
   .stoptag{font-size:12px;color:var(--orange);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
   .stopdesc{font-size:14.5px;line-height:1.5;color:#3a4150;margin:10px 0 0}
+  .stopdesc .dpar{display:block}
+  .stopdesc .dpar+.dpar{margin-top:.7em}   /* gap between paragraphs (each Enter in the admin) */
   .tip{margin-top:10px;font-size:13px;background:#fff7ef;border:1px solid #ffe2c7;color:#8a4b12;padding:9px 11px;border-radius:10px}
   .tip b{color:var(--orange)}
   .guide{margin-top:12px;display:flex;gap:10px;background:#f1f8ff;border:1px solid #d8ecff;border-radius:12px;padding:10px 12px}
@@ -879,7 +881,7 @@ async function speakArrival(p){
   const legs=(DATA.legs && DATA.legs[oi]!=null && String(DATA.legs[oi]).trim()) ? DATA.legs[oi] : '';   // "Spoken narration" field
   let text = narrationCache[key] || legs || s.desc;
   if(aiMode()!=='off' && GUIDE_LIVE_NARRATION && !narrationCache[key]){
-    try{ text=await claudeRequest(narrationSystem(),[{role:'user',content:narrationUser(p)}],240); narrationCache[key]=text; if(cur===p) $('desc').textContent=text; }catch(e){}
+    try{ text=await claudeRequest(narrationSystem(),[{role:'user',content:narrationUser(p)}],240); narrationCache[key]=text; if(cur===p) setDesc(text); }catch(e){}
   }
   if(!voiceOn) return;
   const narr={ audio: s.audio, text: text, off: false };                                  // the stop's own narration (independent)
@@ -1121,7 +1123,7 @@ function updatePosition(lat,lon,acc){
   if(previewing) return;                       // preview is manual step-through; just show the live dot
   if(returningToHub){                          // tour over, guiding back to the Zoomr Zone
     const hub=DATA.stops[hubIdx], d=haversine(lat,lon,hub.lat,hub.lon);
-    if(d < (hub._r||ARRIVE)){ returningToHub=false; if(!hub.endOff){ const _et=(hub.endMsg&&String(hub.endMsg).trim())?hub.endMsg:''; if(_et) $('desc').textContent=_et; playSeg({audio:hub.endAudio, text:_et}, null, true); } expandSheet(); setStatus('🏁 Back at the Start / Finish Zone — end your rental in the Revii app'); return; }
+    if(d < (hub._r||ARRIVE)){ returningToHub=false; if(!hub.endOff){ const _et=(hub.endMsg&&String(hub.endMsg).trim())?hub.endMsg:''; if(_et) setDesc(_et); playSeg({audio:hub.endAudio, text:_et}, null, true); } expandSheet(); setStatus('🏁 Back at the Start / Finish Zone — end your rental in the Revii app'); return; }
     setStatus('🔚 Back to '+hub.name+' · '+fmt(d)); return;
   }
   const s0=stopAt(0), d0=haversine(lat,lon,s0.lat,s0.lon);
@@ -1363,6 +1365,14 @@ setVoiceIcon();
 
 /* ---------- Tour panel (independent of map) ---------- */
 let cur=0;const $=id=>document.getElementById(id);
+/* render stop details preserving paragraph breaks: each line break (Enter in the
+   admin) becomes a spaced paragraph. Text is escaped — never injected as raw HTML. */
+function setDesc(t){
+  const el=$('desc'); if(!el) return;
+  const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const parts=String(t==null?'':t).split(/\n+/).map(s=>s.trim()).filter(Boolean);
+  el.innerHTML = parts.map(p=>'<span class="dpar">'+esc(p)+'</span>').join('');
+}
 let order=[];                                  // active sequence: positions -> original stop indices
 const stopAt=p=>DATA.stops[order[p]];          // stop object at active position p
 function renderPanel(){
@@ -1371,7 +1381,7 @@ function renderPanel(){
   const s=stopAt(cur), oi=order[cur], N=order.length, isHub=(oi===hubIdx);
   $('emoji').textContent = isHub ? '🏁' : s.emoji;
   $('tag').textContent=s.tagline;$('name').textContent=s.name;
-  $('desc').textContent = (isHub && cur===0 && s.startMsg && String(s.startMsg).trim()) ? s.startMsg : (narrationCache[DATA.id+'|'+oi]||s.desc);
+  setDesc((isHub && cur===0 && s.startMsg && String(s.startMsg).trim()) ? s.startMsg : (narrationCache[DATA.id+'|'+oi]||s.desc));
   $('tip').innerHTML='<b>Local tip:</b> '+s.tip;
   $('progtxt').textContent = isHub ? '🏁 Start / Finish Zone' : `Stop ${cur+1} of ${N}`;
   $('progfill').style.width=(N>1?cur/(N-1)*100:0)+'%';
@@ -1400,14 +1410,14 @@ function narrationUser(p){
 async function refreshNarration(){
   if(!order.length) return;
   const p=cur, oi=order[p], key=DATA.id+'|'+oi, s=stopAt(p);
-  if(narrationCache[key]){ $('desc').textContent=narrationCache[key]; if(voiceOn) speak(narrationCache[key]); return; }
-  if(aiMode()==='off' || !GUIDE_LIVE_NARRATION){ $('desc').textContent=s.desc; if(voiceOn) speak(s.desc); return; }   // scripted narration (recommended)
-  $('desc').textContent=s.desc;                              // baseline while generating
+  if(narrationCache[key]){ setDesc(narrationCache[key]); if(voiceOn) speak(narrationCache[key]); return; }
+  if(aiMode()==='off' || !GUIDE_LIVE_NARRATION){ setDesc(s.desc); if(voiceOn) speak(s.desc); return; }   // scripted narration (recommended)
+  setDesc(s.desc);                              // baseline while generating
   const myTour=DATA;
   try{
     const text=await claudeRequest(narrationSystem(), [{role:'user',content:narrationUser(p)}], 240);
     narrationCache[key]=text;
-    if(DATA===myTour && cur===p){ $('desc').textContent=text; if(voiceOn) speak(text); }   // AI fills the stop info
+    if(DATA===myTour && cur===p){ setDesc(text); if(voiceOn) speak(text); }   // AI fills the stop info
   }catch(e){ /* keep the written description */ }
 }
 
