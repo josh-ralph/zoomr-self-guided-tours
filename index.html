@@ -722,7 +722,7 @@ function collapseSheet(){ if(landscapeMode()) return; const hc=document.getEleme
 /* ---------- Live position engine ---------- */
 const ARRIVE=60, OFFROUTE=45;
 let reached=new Set(), nextStop=0, voiceOn=true, watchId=null;
-let touring=false, headingToStart=false, skipping=false, previewing=false, returningToHub=false, pendingArrival=false;
+let touring=false, headingToStart=false, skipping=false, previewing=false, returningToHub=false, pendingArrival=false, announcedStartArrival=false;
 let phase='enroute';             // 'atstop' (arrived, narration done) | 'enroute' (heading to nextStop)
 let recovering=false, recoveryRoute=null, recMan=[], recoveryMode='path', recTargetIdx=-1; const REJOIN=22;   // off-path recovery state
 let rerouteOptedOut=false, rerouteFetching=false, stopRI=[];   // auto-reroute opt-out + per-stop route index
@@ -1065,13 +1065,32 @@ function guideRecovery(lat,lon,toLabel){
   toLabel=toLabel||'back on tour';
   const ri=nearestIdxOn(recoveryRoute,lat,lon), remain=remainOn(recoveryRoute,ri,lat,lon);
   const t=recUpcoming(lat,lon);
-  if(t && t.dist<95){ if(voiceOn && !t.m._said && t.dist<55){ speak(maneuverText(t.m),'turn'); t.m._said=true; } showDir(effectiveDir(t.m), maneuverText(t.m), fmt(t.dist)); }
-  else showDir('straight', 'Follow the route '+toLabel, fmt(remain));
+  if(t){                                                        // turn-by-turn along the recovery route (same nav cards as the tour)
+    if(t.dist < (t.m.r||70)){
+      if(voiceOn && !t.m._said){ speak(maneuverText(t.m),'turn'); t.m._said=true; }
+      showDir(effectiveDir(t.m), maneuverText(t.m), fmt(t.dist));
+    } else {
+      showDir('straight', 'Continue', fmt(t.dist));            // distance to the next turn on the way back
+    }
+  } else {
+    showDir('straight', 'Follow the route '+toLabel, fmt(remain));
+  }
   clearEta();   // ETA is route-based; not meaningful while off-route/rerouting
 }
 function endRecovery(rejoined){ recovering=false; recoveryRoute=null; recMan=[]; recoveryMode='path'; recTargetIdx=-1; if(me){ navIdx=nearestRouteIdx(me.lat,me.lon); } updateRerouteBtn(false); render(); if(rejoined){ if(voiceOn) speak('You are back on the tour route.','turn'); setStatus('✅ Back on the tour route'); } }
 function updateRerouteBtn(offRoute){ const b=document.getElementById('rerouteBtn'); if(!b) return; const vis=(routeEndpoint && !rerouteOptedOut && (recovering || rerouteFetching || offRoute)); b.style.display=vis?'flex':'none'; b.textContent='cancel reroute'; }
-var _rb=document.getElementById('rerouteBtn'); if(_rb) _rb.onclick=function(){ rerouteOptedOut=true; endRecovery(false); updateRerouteBtn(false); };
+/* Cancel reroute = reset the run: stop recovery + touring and return to the
+   pre-start state so the rider has to tap Start Tour again (no auto-restart). */
+function resetTourToStart(){
+  endRecovery(false);
+  touring=false; headingToStart=false; previewing=false; returningToHub=false; skipping=false;
+  pendingArrival=false; rerouteOptedOut=false; announcedStartArrival=false; toStartTriedAt=0;
+  reached=new Set(); nextStop=0; cur=0; resetManeuvers();
+  follow=false; hideDir(); updateRerouteBtn(false);
+  renderPanel(); setStartCta(true,'ready'); fitWhole();
+  setStatus('Reroute cancelled — tap Start Tour to begin again.', false, true);
+}
+var _rb=document.getElementById('rerouteBtn'); if(_rb) _rb.onclick=function(){ resetTourToStart(); };
 async function fetchStreet(m, tourId){
   // Street names are normally baked into the published tour. This is a live
   // fallback, routed through our own ORS proxy (no public Nominatim use).
@@ -1130,7 +1149,11 @@ function updatePosition(lat,lon,acc){
   // before the tour begins: guide the rider to the starting point
   if(!touring){
     if(headingToStart){
-      if(d0 < (s0._r||ARRIVE)){ beginTour(); return; }
+      if(d0 < (s0._r||ARRIVE)){                                 // reached the start — announce and wait for a manual Start Tour tap
+        headingToStart=false; endRecovery(false); follow=true;
+        if(!announcedStartArrival){ announcedStartArrival=true; if(voiceOn) speak("You've arrived at the start of the tour. Tap Start Tour to begin.",'turn'); }
+        setStartCta(true,'ready'); setStatus("🏁 You've arrived at the start — tap Start Tour to begin"); return;
+      }
       // draw the live path to the start during the pre-tour "head to start" phase too
       // (not just once touring) so the rider sees the route as soon as the pill appears
       if(routeEndpoint && me && !rerouteFetching && (!recoveryRoute || !recoveryRoute.length) && (performance.now()-toStartTriedAt>15000)){ toStartTriedAt=performance.now(); routeToStop(0,'Follow the route to the start of the tour.', true); }
@@ -1215,7 +1238,7 @@ function updatePrimary(){
 }
 function endTourNow(){ if(confirm('End the tour and return to the tour list?')){ clearLive(); showPicker(); } }
 function beginTour(){
-  touring=true; headingToStart=false; previewing=false; returningToHub=false; pendingArrival=false; setStartCta(false);
+  touring=true; headingToStart=false; previewing=false; returningToHub=false; pendingArrival=false; announcedStartArrival=false; setStartCta(false);
   reached=new Set(); nextStop=0; skipping=false;
   follow=true; rotateOn=true; state.z=Math.max(state.z,16);   // follow + heading-up while touring
   if(riderHeading!=null) mapHeading=riderHeading;
@@ -1271,7 +1294,7 @@ function startTour(){
   if(!ok){ beginTour(); return; }                      // no GPS available (e.g. local file) -> just start
   const s0=stopAt(0);
   if(me && haversine(me.lat,me.lon,s0.lat,s0.lon) < (s0._r||ARRIVE)){ beginTour(); return; }
-  headingToStart=true; follow=true; rotateOn=true; state.z=Math.max(state.z,16); setStartCta(true,'heading');
+  headingToStart=true; announcedStartArrival=false; follow=true; rotateOn=true; state.z=Math.max(state.z,16); setStartCta(true,'heading');
   setStatus(me ? '🚶 Head to start: '+s0.name+' · '+fmt(haversine(me.lat,me.lon,s0.lat,s0.lon)) : 'Locating you…');
 }
 document.getElementById('primaryBtn').onclick=()=>{
