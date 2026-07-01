@@ -972,6 +972,53 @@ function applyTurnOverrides(tour, mans){
 }
 function buildManeuvers(tour){ const m=applyTurnOverrides(tour, computeManeuversFor(tour.route)); const ts=(tour.zones&&tour.zones.turnScale)||1; m.forEach(x=>{ x.r=((x.rBase!=null)?x.rBase:85)*ts; }); return m; }
 function resetManeuvers(){ maneuvers.forEach(m=>{m.passed=false;m.said=false;}); navIdx=0; toStartTriedAt=0; }
+/* ---- Manage-route: re-stitch DATA.route when the rider removes/reorders stops ---- */
+/* re-anchor turn overrides onto the current DATA.route by their real position; ones on
+   a removed leg find no matching turn and are dropped, the rest snap to the new turn. */
+function reanchorAppTurns(savedEdits, savedAdded){
+  if(!DATA.turns) DATA.turns={edits:{},added:[]};
+  const auto=computeManeuversFor(DATA.route), ne={};
+  (savedEdits||[]).forEach(se=>{ let best=null,bd=1e9; auto.forEach(m=>{ const d=haversine(se.pos[0],se.pos[1],m.lat,m.lon); if(d<bd){bd=d;best=m;} }); if(best&&bd<=40&&!(best.i in ne)){ const e=se.data; if(e.ni!=null)e.ni=best.i; ne[best.i]=e; } });
+  DATA.turns.edits=ne;
+  const R=DATA.route;
+  DATA.turns.added=(savedAdded||[]).filter(a=>{ const ri=nearestRouteIdx(a.lat,a.lon); if(R[ri]&&haversine(a.lat,a.lon,R[ri][0],R[ri][1])<=40){ a.i=ri; return true; } return false; });
+}
+/* recompute everything that hangs off DATA.route (radii, per-stop indices, distances, turns) */
+function recomputeRouteState(){
+  const _ss=(DATA.zones&&DATA.zones.stopScale)||1;
+  DATA.stops.forEach(s=>{ const base=(s.r!=null?s.r:Math.max(25, distToRoute(s.lat,s.lon)+15)); s._r=base*_ss; });
+  { let _pri=0; stopRI=DATA.stops.map(()=>0); order.forEach(oi=>{ const s=DATA.stops[oi]; const ri=firstApproachIdx(s.lat,s.lon,_pri,Math.max((s._r||60),50)); stopRI[oi]=ri; _pri=ri; }); }   // map only the active stops, in tour order
+  { const R=DATA.route; routeCum=[0]; for(let i=1;i<R.length;i++) routeCum[i]=routeCum[i-1]+haversine(R[i-1][0],R[i-1][1],R[i][0],R[i][1]); }
+  DATA._man=null; maneuvers=buildManeuvers(DATA); resetManeuvers();
+  bounds=computeBounds();
+}
+/* rebuild the polyline for the current `order`: keep the original leg where two stops
+   were already adjacent (preserves hand-tuned geometry + turns); route the gap via ORS
+   wherever stops were removed or the order changed. Always rebuilt from the pristine route. */
+async function rebuildRouteForOrder(){
+  if(!routeEndpoint || order.length<2) return false;
+  if(!DATA._route0){                                   // cache pristine route + turns + per-stop indices once
+    DATA._route0=DATA.route.slice();
+    DATA._turns0=JSON.parse(JSON.stringify(DATA.turns||{edits:{},added:[]}));
+    let _p=0; DATA._stopIdx0=DATA.stops.map(s=>{ const ri=firstApproachIdx(s.lat,s.lon,_p,Math.max((s._r||60),50)); _p=ri; return ri; });
+  }
+  const R0=DATA._route0, idx0=DATA._stopIdx0, t0=DATA._turns0||{edits:{},added:[]};
+  const savedEdits=[]; for(const kk in (t0.edits||{})){ const e=t0.edits[kk]; const pi=(e.ni!=null?e.ni:+kk); const p=R0[Math.min(pi,R0.length-1)]; if(p) savedEdits.push({pos:[p[0],p[1]],data:JSON.parse(JSON.stringify(e))}); }
+  const savedAdded=(t0.added||[]).map(a=>Object.assign({},a));
+  const nr=[];
+  for(let p=0;p<order.length-1;p++){
+    const P=order[p], Q=order[p+1]; let leg;
+    if(Q===P+1){ let a=idx0[P],b=idx0[Q]; if(a>b){const t=a;a=b;b=t;} leg=R0.slice(a,b+1); }   // kept leg
+    else { const A=DATA.stops[P], B=DATA.stops[Q]; leg=await fetchRoute([A.lon,A.lat],[B.lon,B.lat]); }   // routed fill
+    if(!leg||!leg.length) continue;
+    if(nr.length) nr.push(...leg.slice(1)); else nr.push(...leg);
+  }
+  if(nr.length<2) return false;
+  DATA.route=nr;
+  reanchorAppTurns(savedEdits, savedAdded);
+  recomputeRouteState();
+  return true;
+}
 /* turn direction: an admin override (m.dir) wins; otherwise derive from the path angle */
 function dirFromAngle(a){ a=a||0; const m=Math.abs(a); if(m<18) return 'straight'; const s=a<0?'left':'right'; if(m<50) return 'slight-'+s; if(m>=120) return 'sharp-'+s; return s; }
 function effectiveDir(m){ return (m && m.dir) ? m.dir : dirFromAngle(m?m.angle:0); }
@@ -1391,9 +1438,15 @@ document.getElementById('manageBtn').onclick=()=>{
 };
 document.getElementById('manageX').onclick=()=>document.getElementById('manageModal').classList.remove('open');
 document.getElementById('manageModal').onclick=e=>{ if(e.target.id==='manageModal') e.currentTarget.classList.remove('open'); };
-document.getElementById('manageApply').onclick=()=>{
+document.getElementById('manageApply').onclick=async ()=>{
   if(!mIncluded.has(mStart)) mStart=[...mIncluded].sort((a,b)=>a-b)[0];
   order=buildOrder(mStart, mIncluded);
+  const btn=document.getElementById('manageApply');
+  if(routeEndpoint){                              // re-stitch the polyline so removed stops' legs are dropped and gaps are routed
+    const _t=btn.textContent; btn.disabled=true; btn.textContent='Re-routing…';
+    try{ await rebuildRouteForOrder(); }catch(e){}
+    btn.textContent=_t; btn.disabled=false;
+  }
   cur=0; reached=new Set(); nextStop=0; skipping=false; touring=false; headingToStart=false; previewing=false;
   narrationCache={};
   document.getElementById('manageModal').classList.remove('open');
@@ -1720,6 +1773,7 @@ function clearLive(){
 function showPicker(){ clearLive(); body.innerHTML=''; delete body.dataset.init; chatHistory=[]; pickerEl.classList.remove('hidden'); }
 function loadTour(i){
   DATA=TOURS[i];
+  if(DATA._route0){ DATA.route=DATA._route0.slice(); if(DATA._turns0) DATA.turns=JSON.parse(JSON.stringify(DATA._turns0)); DATA._man=null; }   // reset any prior "Manage route" customization on (re)entry
   clearLive();
   body.innerHTML=''; delete body.dataset.init; chatHistory=[]; narrationCache={};   // reset chat + narration for new tour
   document.getElementById('tourName').textContent=DATA.tour.name;
