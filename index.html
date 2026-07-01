@@ -1131,6 +1131,9 @@ function updatePosition(lat,lon,acc){
   if(!touring){
     if(headingToStart){
       if(d0 < (s0._r||ARRIVE)){ beginTour(); return; }
+      // draw the live path to the start during the pre-tour "head to start" phase too
+      // (not just once touring) so the rider sees the route as soon as the pill appears
+      if(routeEndpoint && me && !rerouteFetching && (!recoveryRoute || !recoveryRoute.length) && (performance.now()-toStartTriedAt>15000)){ toStartTriedAt=performance.now(); routeToStop(0,'Follow the route to the start of the tour.', true); }
       setStatus('🚶 Head to start: '+s0.name+' · '+fmt(d0)); return;
     }
     setStatus(d0 < (s0._r||ARRIVE) ? 'You’re at the start — tap Start tour' : 'Tap Start tour to begin'); return;
